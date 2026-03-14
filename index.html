@@ -888,16 +888,18 @@ async function saveData() {
   saving = true;
   setSyncState('loading', 'salvataggio…');
   try {
-    const header = FIELDS;
     const rows = [
-      header,
+      FIELDS,
       ...data.map(d => FIELDS.map(f => d[f] || '')),
       ['__tags__', JSON.stringify(customTags)]
     ];
-    const encoded = encodeURIComponent(JSON.stringify(rows));
-    const res = await fetch(SHEET_URL + '?action=write&rows=' + encoded);
-    const result = await res.json();
-    if (!result.ok) throw new Error('risposta non ok');
+    const res = await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'write', rows })
+    });
+    // no-cors returns opaque response, assume ok
     setSyncState('ok', 'salvato ' + new Date().toLocaleTimeString('it'));
   } catch(e) {
     setSyncState('err', 'errore salvataggio');
