@@ -176,6 +176,46 @@ select option { background: #1e2535; }
   color: var(--text3);
 }
 
+/* PILL FILTERS */
+.pill-group {
+  display: flex; align-items: center; gap: 4px;
+  flex-wrap: wrap;
+}
+.pill-label {
+  font-size: 10px; font-weight: 500; letter-spacing: .06em;
+  color: var(--text3); text-transform: uppercase;
+  margin-right: 2px; white-space: nowrap;
+}
+.pill {
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 11px; font-family: var(--mono);
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.pill:hover { border-color: var(--border2); color: var(--text2); }
+.pill.active {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pill-reset {
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(239,68,68,.3);
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 11px; font-family: var(--mono);
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.pill-reset:hover { background: rgba(239,68,68,.2); }
+
 /* TABLE */
 .table-wrap {
   flex: 1; overflow: auto;
@@ -461,6 +501,56 @@ tr:hover .action-btns { opacity: 1; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+/* IMPORT PREVIEW */
+.import-drop {
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  color: var(--text3);
+  font-size: 13px;
+}
+.import-drop:hover, .import-drop.drag-over {
+  border-color: var(--accent);
+  background: var(--blue-bg);
+  color: var(--text2);
+}
+.import-drop .drop-icon { font-size: 24px; margin-bottom: 8px; opacity: .5; }
+.import-drop .drop-hint { font-size: 11px; margin-top: 6px; color: var(--text3); }
+
+.preview-table-wrap { max-height: 260px; overflow-y: auto; margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.preview-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.preview-table th { padding: 6px 10px; background: var(--bg3); color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+.preview-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); color: var(--text2); white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.preview-table tr:last-child td { border-bottom: none; }
+.import-summary { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--text2); }
+.import-summary strong { color: var(--text); }
+
+/* TAG MANAGER */
+.tag-manager-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-height: 280px; overflow-y: auto; }
+.tag-manager-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.tag-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tag-manager-item span { flex: 1; font-size: 12px; font-family: var(--mono); }
+.tag-default-badge { font-size: 10px; color: var(--text3); padding: 1px 5px; background: var(--bg4); border-radius: 3px; }
+.tag-add-row { display: flex; gap: 8px; align-items: center; }
+.tag-add-row input { flex: 1; }
+.color-picker-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.color-swatch {
+  width: 22px; height: 22px; border-radius: 50%;
+  cursor: pointer; border: 2px solid transparent;
+  transition: transform .1s;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: #fff; }
 </style>
 </head>
 <body>
@@ -478,35 +568,35 @@ tr:hover .action-btns { opacity: 1; }
         <span id="syncLabel">—</span>
       </div>
       <button class="btn btn-sm" onclick="loadData()">↻ Ricarica</button>
+      <button class="btn btn-sm" onclick="openImportModal()">↑ Importa</button>
       <button class="btn btn-sm" onclick="exportCSV()">↓ CSV</button>
+      <button class="btn btn-sm" onclick="openTagManager()">⊞ Tag</button>
       <button class="btn btn-primary" onclick="openModal()">+ Nuova escalation</button>
     </div>
 
     <div class="filter-bar">
       <div class="search-wrap">
         <span class="search-icon">⌕</span>
-        <input id="searchInput" type="text" placeholder="Cerca ticket, shop, descrizione..." oninput="render()">
+        <input id="searchInput" type="text" placeholder="Cerca ticket, shop, descrizione..." oninput="updateResetBtn();render()">
       </div>
-      <select id="filterStatus" onchange="render()">
-        <option value="">Tutti gli stati</option>
-        <option value="open">open</option>
-        <option value="closed">closed</option>
-        <option value="resolved">resolved</option>
-        <option value="pending">pending</option>
-        <option value="da chiudere">da chiudere</option>
-      </select>
-      <select id="filterTag" onchange="render()">
-        <option value="">Tutti i tag</option>
-        <option value="shop">shop</option>
-        <option value="utenza">utenza</option>
-        <option value="matricola">matricola</option>
-        <option value="db full">db full</option>
-      </select>
-      <select id="filterAging" onchange="render()">
-        <option value="">Tutti</option>
-        <option value="critical">Critici (&gt;14gg)</option>
-        <option value="warn">Attenzione (7–14gg)</option>
-      </select>
+      <div class="pill-group" id="pillStatus">
+        <span class="pill-label">Stato</span>
+        <button class="pill active" data-val="open" onclick="togglePill(this,'status')">open</button>
+        <button class="pill" data-val="pending" onclick="togglePill(this,'status')">pending</button>
+        <button class="pill" data-val="da chiudere" onclick="togglePill(this,'status')">da chiudere</button>
+        <button class="pill" data-val="resolved" onclick="togglePill(this,'status')">resolved</button>
+        <button class="pill" data-val="closed" onclick="togglePill(this,'status')">closed</button>
+      </div>
+      <div class="pill-group" id="pillTag">
+        <span class="pill-label">Tag</span>
+        <div id="pillTagItems" style="display:contents"></div>
+      </div>
+      <div class="pill-group" id="pillAging">
+        <span class="pill-label">Ageing</span>
+        <button class="pill" data-val="warn" onclick="togglePill(this,'aging')">7–14gg</button>
+        <button class="pill" data-val="critical" onclick="togglePill(this,'aging')">⚑ &gt;14gg</button>
+      </div>
+      <button class="pill-reset" id="pillResetBtn" onclick="resetFilters()" style="display:none">✕ reset filtri</button>
       <span class="count-label" id="countLabel"></span>
     </div>
 
@@ -644,19 +734,121 @@ tr:hover .action-btns { opacity: 1; }
   </div>
 </div>
 
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importOverlay" style="display:none" onclick="if(event.target===this)closeImport()">
+  <div class="modal" style="width:660px">
+    <div class="modal-title">
+      <span>Importa escalation</span>
+      <span class="modal-title-badge">CSV / XLSX</span>
+    </div>
+
+    <div id="importDropZone" class="import-drop"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleDrop(event)"
+      onclick="document.getElementById('importFileInput').click()">
+      <div class="drop-icon">⬆</div>
+      <div>Trascina qui il file oppure clicca per selezionarlo</div>
+      <div class="drop-hint">Supporta .csv e .xlsx — colonne attese: Ticket, Descrizione, Tags, Shop, AM/sec, Azione, Stato, In carico a, Data apertura, Note, Data escalation, Data chiusura</div>
+    </div>
+    <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none" onchange="handleFileSelect(event)">
+
+    <div id="importPreviewWrap" style="display:none">
+      <div class="import-summary">
+        <div>Trovate <strong id="importCount">0</strong> righe</div>
+        <div>Duplicate ignorabili: <strong id="importDups">0</strong></div>
+        <div style="margin-left:auto;color:var(--amber)" id="importWarn"></div>
+      </div>
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead><tr id="previewHead"></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+        <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="importSkipDups" checked> Salta ticket già presenti
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeImport()">Annulla</button>
+      <button class="btn btn-primary" id="importConfirmBtn" style="display:none" onclick="confirmImport()">Importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAG MANAGER MODAL -->
+<div class="modal-overlay" id="tagManagerOverlay" style="display:none" onclick="if(event.target===this)closeTagManager()">
+  <div class="modal" style="width:420px">
+    <div class="modal-title"><span>Gestione tag</span></div>
+
+    <div class="tag-manager-list" id="tagManagerList"></div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;letter-spacing:.04em">AGGIUNGI TAG</div>
+      <div class="tag-add-row">
+        <input id="newTagName" type="text" placeholder="Nome tag…" maxlength="24"
+          onkeydown="if(event.key==='Enter')addCustomTag()"
+          style="padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:13px;width:100%">
+        <button class="btn btn-primary" onclick="addCustomTag()">+ Aggiungi</button>
+      </div>
+      <div class="color-picker-row" id="colorPickerRow"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeTagManager()">Fatto</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast-wrap" id="toastWrap"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxEy9XIj6_xloR2z0s3JddlUfnfwCitMnKxD4VBFw3w6KsQY1CXM4W_A-z3EfPFd6I/exec';
-
 const FIELDS = ['id','ticket','desc','tag','shop','am','azione','stato','carico','dataAp','dataEsc','dataCh','note'];
 
+// Default tag colours palette
+const TAG_COLORS = ['#4f8ef7','#22c55e','#f59e0b','#ef4444','#a78bfa','#ec4899','#14b8a6','#f97316','#8b5cf6','#06b6d4'];
+
+const DEFAULT_TAGS = [
+  { name:'shop',      color:'#22c55e', default:true },
+  { name:'utenza',    color:'#4f8ef7', default:true },
+  { name:'matricola', color:'#f59e0b', default:true },
+  { name:'db full',   color:'#ef4444', default:true },
+];
+
 let data = [];
+let customTags = [];   // [{name, color}]
 let editId = null;
 let sortField = 'dataAp';
 let sortDir = -1;
 let saving = false;
+let importRows = [];
+let selectedColor = TAG_COLORS[0];
+
+// ─── TAGS ──────────────────────────────────────────────────────────────
+function allTags() { return [...DEFAULT_TAGS, ...customTags]; }
+
+function tagStyle(name) {
+  const found = allTags().find(t => t.name === name);
+  const color = found ? found.color : '#8b95a8';
+  return `background:${color}22;color:${color};border:1px solid ${color}44`;
+}
+
+function tagBadge(tag) {
+  if (!tag) return '';
+  return `<span class="tag" style="${tagStyle(tag)}">${tag}</span>`;
+}
+
+function buildTagSelects() {
+  const opts = ['<option value="">—</option>', ...allTags().map(t => `<option value="${t.name}">${t.name}</option>`)].join('');
+  ['fTag'].forEach(id => { const el = document.getElementById(id); if(el){ const v=el.value; el.innerHTML=opts; el.value=v; }});
+  buildTagPills();
+}
 
 // ─── SYNC ──────────────────────────────────────────────────────────────
 function setSyncState(state, label) {
@@ -672,14 +864,17 @@ async function loadData() {
     const res = await fetch(SHEET_URL + '?action=read&t=' + Date.now());
     const rows = await res.json();
     if (!Array.isArray(rows)) throw new Error('formato non valido');
-    // row 0 = header, skip if first cell == 'id'
     const start = (rows[0] && rows[0][0] === 'id') ? 1 : 0;
-    data = rows.slice(start).filter(r => r[0]).map(r => {
+    // last row might be custom tags stored as special row
+    const tagRow = rows.find(r => r[0] === '__tags__');
+    if (tagRow && tagRow[1]) { try { customTags = JSON.parse(tagRow[1]); } catch(e){} }
+    data = rows.slice(start).filter(r => r[0] && r[0] !== '__tags__').map(r => {
       const obj = {};
       FIELDS.forEach((f,i) => obj[f] = r[i] !== undefined ? String(r[i]) : '');
       return obj;
     });
     setSyncState('ok', 'sincronizzato ' + new Date().toLocaleTimeString('it'));
+    buildTagSelects();
     render();
     toast('Dati caricati — ' + data.length + ' escalation', 'ok');
   } catch(e) {
@@ -694,11 +889,13 @@ async function saveData() {
   setSyncState('loading', 'salvataggio…');
   try {
     const header = FIELDS;
-    const rows = [header, ...data.map(d => FIELDS.map(f => d[f] || ''))];
-    const res = await fetch(SHEET_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'write', rows })
-    });
+    const rows = [
+      header,
+      ...data.map(d => FIELDS.map(f => d[f] || '')),
+      ['__tags__', JSON.stringify(customTags)]
+    ];
+    const encoded = encodeURIComponent(JSON.stringify(rows));
+    const res = await fetch(SHEET_URL + '?action=write&rows=' + encoded);
     const result = await res.json();
     if (!result.ok) throw new Error('risposta non ok');
     setSyncState('ok', 'salvato ' + new Date().toLocaleTimeString('it'));
@@ -717,23 +914,65 @@ function aging(item) {
   if (isNaN(start)) return null;
   return Math.floor((end - start) / 86400000);
 }
-
 function isClosed(item) { return item.stato === 'closed' || item.stato === 'resolved'; }
+
+// ─── PILL FILTERS ──────────────────────────────────────────────────────
+// State: sets of active values. Empty set = "all"
+const activeFilters = { status: new Set(), tag: new Set(), aging: new Set() };
+
+function togglePill(btn, group) {
+  const val = btn.dataset.val;
+  if (activeFilters[group].has(val)) {
+    activeFilters[group].delete(val);
+    btn.classList.remove('active');
+  } else {
+    activeFilters[group].add(val);
+    btn.classList.add('active');
+  }
+  updateResetBtn();
+  render();
+}
+
+function updateResetBtn() {
+  const any = Object.values(activeFilters).some(s => s.size > 0) || (document.getElementById('searchInput').value||'').trim();
+  document.getElementById('pillResetBtn').style.display = any ? 'inline-block' : 'none';
+}
+
+function resetFilters() {
+  Object.values(activeFilters).forEach(s => s.clear());
+  document.querySelectorAll('.pill.active').forEach(p => p.classList.remove('active'));
+  document.getElementById('searchInput').value = '';
+  document.getElementById('pillResetBtn').style.display = 'none';
+  render();
+}
+
+function buildTagPills() {
+  const container = document.getElementById('pillTagItems');
+  if (!container) return;
+  const active = activeFilters.tag;
+  container.innerHTML = allTags().map(t =>
+    `<button class="pill${active.has(t.name)?' active':''}" data-val="${t.name}" onclick="togglePill(this,'tag')"
+      style="${active.has(t.name)?'':''}">
+      ${t.name}
+    </button>`
+  ).join('');
+}
 
 // ─── RENDER ────────────────────────────────────────────────────────────
 function getFiltered() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
-  const fS = document.getElementById('filterStatus').value;
-  const fT = document.getElementById('filterTag').value;
-  const fA = document.getElementById('filterAging').value;
+  const fS = activeFilters.status;
+  const fT = activeFilters.tag;
+  const fA = activeFilters.aging;
   return data.filter(d => {
     if (q && !['ticket','desc','shop','am','azione','note','carico'].some(f => (d[f]||'').toLowerCase().includes(q))) return false;
-    if (fS && d.stato !== fS) return false;
-    if (fT && d.tag !== fT) return false;
-    if (fA) {
+    if (fS.size && !fS.has(d.stato)) return false;
+    if (fT.size && !fT.has(d.tag)) return false;
+    if (fA.size) {
       const a = aging(d); const open = !isClosed(d);
-      if (fA === 'critical' && !(open && a !== null && a > 14)) return false;
-      if (fA === 'warn' && !(open && a !== null && a >= 7 && a <= 14)) return false;
+      const matchCrit = fA.has('critical') && open && a !== null && a > 14;
+      const matchWarn = fA.has('warn') && open && a !== null && a >= 7 && a <= 14;
+      if (!matchCrit && !matchWarn) return false;
     }
     return true;
   });
@@ -743,9 +982,7 @@ function getSorted(arr) {
   return [...arr].sort((a, b) => {
     let va = sortField === '_age' ? (aging(a) ?? -1) : (a[sortField] || '');
     let vb = sortField === '_age' ? (aging(b) ?? -1) : (b[sortField] || '');
-    if (va < vb) return -sortDir;
-    if (va > vb) return sortDir;
-    return 0;
+    if (va < vb) return -sortDir; if (va > vb) return sortDir; return 0;
   });
 }
 
@@ -754,11 +991,6 @@ function sortBy(field) {
   document.querySelectorAll('th').forEach(th => th.className = '');
   event.currentTarget.className = sortDir === 1 ? 'sort-asc' : 'sort-desc';
   render();
-}
-
-function tagBadge(tag) {
-  const map = {shop:'tag-shop',utenza:'tag-utenza',matricola:'tag-matricola','db full':'tag-dbfull'};
-  return tag ? `<span class="tag ${map[tag]||'tag-altro'}">${tag}</span>` : '';
 }
 
 function statoBadge(s) {
@@ -781,7 +1013,6 @@ function render() {
   const tbody = document.getElementById('tbody');
   const stateMsg = document.getElementById('stateMsg');
   document.getElementById('countLabel').textContent = rows.length + ' / ' + data.length;
-
   if (!rows.length) {
     tbody.innerHTML = '';
     stateMsg.style.display = 'flex';
@@ -819,50 +1050,29 @@ function updateSidebar() {
   const ages = open.map(d => aging(d)).filter(a => a !== null);
   const avg = ages.length ? Math.round(ages.reduce((a,b) => a+b, 0) / ages.length) : 0;
   const crit = open.filter(d => { const a = aging(d); return a !== null && a > 14; });
-
   document.getElementById('mTot').textContent = data.length;
   document.getElementById('mOpen').textContent = open.length;
   document.getElementById('mAvg').textContent = avg;
   document.getElementById('mCrit').textContent = crit.length;
 
-  // attenzionare
   const sorted = [...open].filter(d => aging(d) !== null).sort((a,b) => aging(b)-aging(a)).slice(0,6);
   document.getElementById('attnList').innerHTML = sorted.length
-    ? sorted.map(d => `<div class="attn-item">
-        <div>
-          <div class="attn-ticket">${d.ticket}</div>
-          <div class="attn-meta">${trunc(d.carico||'—',22)} · ${trunc(d.shop||'—',16)}</div>
-        </div>
-        <span class="attn-age">${aging(d)}gg</span>
-      </div>`).join('')
+    ? sorted.map(d => `<div class="attn-item"><div><div class="attn-ticket">${d.ticket}</div><div class="attn-meta">${trunc(d.carico||'—',22)} · ${trunc(d.shop||'—',16)}</div></div><span class="attn-age">${aging(d)}gg</span></div>`).join('')
     : '<div style="font-size:11px;color:var(--text3)">Nessun caso aperto.</div>';
 
-  // aging distribution
-  const buckets = [
-    {label:'0–3gg', min:0, max:3, color:'#22c55e'},
-    {label:'4–7gg', min:4, max:7, color:'#84cc16'},
-    {label:'8–14gg', min:8, max:14, color:'#f59e0b'},
-    {label:'&gt;14gg', min:15, max:9999, color:'#ef4444'},
-  ];
+  const buckets = [{label:'0–3gg',min:0,max:3,color:'#22c55e'},{label:'4–7gg',min:4,max:7,color:'#84cc16'},{label:'8–14gg',min:8,max:14,color:'#f59e0b'},{label:'&gt;14gg',min:15,max:9999,color:'#ef4444'}];
   const openAges = open.map(d => aging(d)).filter(a => a !== null);
   const maxCount = Math.max(1, ...buckets.map(b => openAges.filter(a => a >= b.min && a <= b.max).length));
   document.getElementById('agingBars').innerHTML = buckets.map(b => {
     const cnt = openAges.filter(a => a >= b.min && a <= b.max).length;
-    const pct = Math.round(cnt / maxCount * 100);
-    return `<div class="aging-bar-row">
-      <span class="aging-bar-label">${b.label}</span>
-      <div class="aging-bar-track"><div class="aging-bar-fill" style="width:${pct}%;background:${b.color}"></div></div>
-      <span class="aging-bar-num">${cnt}</span>
-    </div>`;
+    return `<div class="aging-bar-row"><span class="aging-bar-label">${b.label}</span><div class="aging-bar-track"><div class="aging-bar-fill" style="width:${Math.round(cnt/maxCount*100)}%;background:${b.color}"></div></div><span class="aging-bar-num">${cnt}</span></div>`;
   }).join('');
 
-  // tag stats
   const tagC = {};
   data.forEach(d => { const t = d.tag||'altro'; tagC[t] = (tagC[t]||0)+1; });
   document.getElementById('tagStats').innerHTML = Object.entries(tagC).sort((a,b)=>b[1]-a[1]).map(([t,n]) =>
     `<div class="stat-row">${tagBadge(t)}<span class="stat-count">${n}</span></div>`).join('');
 
-  // status stats
   const stC = {};
   data.forEach(d => { stC[d.stato] = (stC[d.stato]||0)+1; });
   document.getElementById('statusStats').innerHTML = Object.entries(stC).sort((a,b)=>b[1]-a[1]).map(([s,n]) =>
@@ -875,8 +1085,8 @@ function openModal(id = null) {
   const d = id ? data.find(x => x.id === id) : {};
   document.getElementById('modalTitleText').textContent = id ? 'Modifica escalation' : 'Nuova escalation';
   const badge = document.getElementById('modalBadge');
-  if (id && d) { badge.textContent = d.ticket; badge.style.display = 'inline-block'; }
-  else { badge.style.display = 'none'; }
+  if (id && d) { badge.textContent = d.ticket; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+  buildTagSelects();
   document.getElementById('fTicket').value = d?.ticket || '';
   document.getElementById('fDesc').value = d?.desc || '';
   document.getElementById('fTag').value = d?.tag || '';
@@ -912,10 +1122,8 @@ async function saveModal() {
     dataCh: document.getElementById('fDataCh').value,
     note: document.getElementById('fNote').value.trim()
   };
-  if (editId) { const i = data.findIndex(x => x.id === editId); if (i > -1) data[i] = obj; }
-  else data.push(obj);
-  closeModal();
-  render();
+  if (editId) { const i = data.findIndex(x => x.id === editId); if (i > -1) data[i] = obj; } else data.push(obj);
+  closeModal(); render();
   await saveData();
   toast(editId ? 'Escalation aggiornata' : 'Escalation aggiunta', 'ok');
 }
@@ -926,8 +1134,7 @@ async function deleteItem(id) {
   const d = data.find(x => x.id === id);
   if (!confirm(`Eliminare ${d?.ticket || 'questa escalation'}?`)) return;
   data = data.filter(x => x.id !== id);
-  render();
-  await saveData();
+  render(); await saveData();
   toast('Escalation eliminata', 'ok');
 }
 
@@ -942,6 +1149,214 @@ function exportCSV() {
   a.click();
 }
 
+// ─── IMPORT ────────────────────────────────────────────────────────────
+// Column mapping: original Excel headers → internal fields
+const COL_MAP = {
+  'ticket':           'ticket',
+  'descrizione':      'desc',
+  'tags':             'tag',
+  'tag':              'tag',
+  'p':                '',        // skip (priority col)
+  'shop':             'shop',
+  'am/sec':           'am',
+  'am':               'am',
+  'azione':           'azione',
+  'stato (assig.)':   'stato',
+  'stato':            'stato',
+  'in carico a':      'carico',
+  'data aper.':       'dataAp',
+  'data apertura':    'dataAp',
+  'note':             'note',
+  'data escalation':  'dataEsc',
+  'data escalatic':   'dataEsc',
+  'data chiusura':    'dataCh',
+};
+
+function openImportModal() {
+  importRows = [];
+  document.getElementById('importPreviewWrap').style.display = 'none';
+  document.getElementById('importConfirmBtn').style.display = 'none';
+  document.getElementById('importDropZone').style.display = 'block';
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importOverlay').style.display = 'flex';
+}
+function closeImport() { document.getElementById('importOverlay').style.display = 'none'; }
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('importDropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) processImportFile(file);
+}
+function handleFileSelect(e) { const file = e.target.files[0]; if (file) processImportFile(file); }
+
+function excelDateToStr(val) {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    // try parse common italian formats: dd/mm/yyyy or dd-mm-yyyy
+    const m = val.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+      const y = m[3].length === 2 ? '20'+m[3] : m[3];
+      return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    }
+    // already ISO
+    if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0,10);
+    return val;
+  }
+  if (typeof val === 'number') {
+    // Excel serial date
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return d.toISOString().slice(0,10);
+  }
+  if (val instanceof Date) return val.toISOString().slice(0,10);
+  return String(val);
+}
+
+function processImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let rows = [];
+      if (file.name.endsWith('.csv')) {
+        const text = new TextDecoder('utf-8').decode(e.target.result);
+        rows = text.trim().split('\n').map(line => {
+          const r = []; let cur='', inQ=false;
+          for (let i=0;i<line.length;i++) {
+            const c=line[i];
+            if(c==='"'){inQ=!inQ;}
+            else if(c===','&&!inQ){r.push(cur.trim());cur='';}
+            else cur+=c;
+          }
+          r.push(cur.trim());
+          return r;
+        });
+      } else {
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:false});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      }
+      parseImportRows(rows);
+    } catch(err) {
+      toast('Errore nella lettura del file: ' + err.message, 'err');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseImportRows(rawRows) {
+  if (!rawRows.length) { toast('File vuoto.', 'err'); return; }
+  // Find header row (first row with 'Ticket' or 'ticket')
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, rawRows.length); i++) {
+    if (rawRows[i].some(c => String(c||'').toLowerCase().includes('ticket'))) { headerIdx = i; break; }
+  }
+  const headers = rawRows[headerIdx].map(h => String(h||'').toLowerCase().trim());
+  const colIdx = {}; // fieldName → column index
+  headers.forEach((h, i) => { const mapped = COL_MAP[h]; if (mapped) colIdx[mapped] = i; });
+
+  importRows = rawRows.slice(headerIdx + 1).filter(r => r.some(c => c !== '' && c !== null && c !== undefined)).map((r, ri) => {
+    const obj = { id: String(Date.now() + ri) };
+    FIELDS.filter(f => f !== 'id').forEach(f => {
+      const idx = colIdx[f];
+      let val = idx !== undefined ? String(r[idx] ?? '') : '';
+      // normalise date fields
+      if (['dataAp','dataCh','dataEsc'].includes(f)) val = excelDateToStr(idx !== undefined ? r[idx] : '');
+      // normalise stato
+      if (f === 'stato') val = val.toLowerCase().trim();
+      obj[f] = val.trim();
+    });
+    return obj;
+  }).filter(r => r.ticket);
+
+  const existing = new Set(data.map(d => d.ticket.toLowerCase()));
+  const dups = importRows.filter(r => existing.has(r.ticket.toLowerCase())).length;
+
+  document.getElementById('importCount').textContent = importRows.length;
+  document.getElementById('importDups').textContent = dups;
+  document.getElementById('importWarn').textContent = dups > 0 ? `⚠ ${dups} ticket già presenti` : '';
+
+  // Preview table
+  const previewCols = ['ticket','desc','tag','shop','stato','dataAp'];
+  document.getElementById('previewHead').innerHTML = previewCols.map(c => `<th>${c}</th>`).join('');
+  document.getElementById('previewBody').innerHTML = importRows.slice(0,20).map(r =>
+    `<tr>${previewCols.map(c => `<td title="${r[c]||''}">${trunc(r[c]||'',22)}</td>`).join('')}</tr>`
+  ).join('') + (importRows.length > 20 ? `<tr><td colspan="${previewCols.length}" style="text-align:center;color:var(--text3);padding:8px">… e altre ${importRows.length-20} righe</td></tr>` : '');
+
+  document.getElementById('importDropZone').style.display = 'none';
+  document.getElementById('importPreviewWrap').style.display = 'block';
+  document.getElementById('importConfirmBtn').style.display = 'inline-flex';
+}
+
+async function confirmImport() {
+  const skipDups = document.getElementById('importSkipDups').checked;
+  const existing = new Set(data.map(d => d.ticket.toLowerCase()));
+  let toAdd = importRows;
+  if (skipDups) toAdd = toAdd.filter(r => !existing.has(r.ticket.toLowerCase()));
+  if (!toAdd.length) { toast('Nessuna riga nuova da importare.', 'err'); return; }
+  data = [...data, ...toAdd];
+  closeImport(); render();
+  await saveData();
+  toast(`Importate ${toAdd.length} escalation`, 'ok');
+}
+
+// ─── TAG MANAGER ───────────────────────────────────────────────────────
+function openTagManager() {
+  selectedColor = TAG_COLORS[0];
+  renderTagManager();
+  document.getElementById('tagManagerOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('newTagName').focus(), 50);
+}
+function closeTagManager() {
+  document.getElementById('tagManagerOverlay').style.display = 'none';
+  buildTagSelects(); render();
+}
+
+function renderTagManager() {
+  const list = document.getElementById('tagManagerList');
+  const allT = allTags();
+  list.innerHTML = allT.map((t, i) => `
+    <div class="tag-manager-item">
+      <div class="tag-color-dot" style="background:${t.color}"></div>
+      <span class="tag" style="${tagStyle(t.name)}">${t.name}</span>
+      ${t.default ? '<span class="tag-default-badge">default</span>' : ''}
+      <div style="margin-left:auto;display:flex;gap:4px">
+        ${!t.default ? `<button class="btn-icon btn-del" onclick="deleteCustomTag('${t.name}')" title="Elimina tag">✕</button>` : ''}
+      </div>
+    </div>`).join('');
+
+  // color swatches
+  document.getElementById('colorPickerRow').innerHTML = TAG_COLORS.map(c =>
+    `<div class="color-swatch${c===selectedColor?' selected':''}" style="background:${c}" onclick="selectColor('${c}')"></div>`
+  ).join('');
+}
+
+function selectColor(c) {
+  selectedColor = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.toggle('selected', s.style.background===c||s.style.backgroundColor===c));
+  // re-render swatches cleanly
+  renderTagManager();
+}
+
+function addCustomTag() {
+  const input = document.getElementById('newTagName');
+  const name = input.value.trim().toLowerCase();
+  if (!name) { toast('Inserisci un nome per il tag.', 'err'); return; }
+  if (allTags().some(t => t.name === name)) { toast('Tag già esistente.', 'err'); return; }
+  customTags.push({ name, color: selectedColor });
+  input.value = '';
+  renderTagManager();
+  saveData();
+  toast('Tag "' + name + '" aggiunto', 'ok');
+}
+
+function deleteCustomTag(name) {
+  if (!confirm(`Eliminare il tag "${name}"? Le escalation che lo usano manterranno il valore.`)) return;
+  customTags = customTags.filter(t => t.name !== name);
+  renderTagManager();
+  saveData();
+  toast('Tag eliminato', 'ok');
+}
+
 // ─── TOAST ─────────────────────────────────────────────────────────────
 function toast(msg, type = 'ok') {
   const wrap = document.getElementById('toastWrap');
@@ -954,7 +1369,7 @@ function toast(msg, type = 'ok') {
 
 // ─── KEYBOARD ──────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') { closeModal(); closeImport(); closeTagManager(); }
   if ((e.metaKey||e.ctrlKey) && e.key === 'n') { e.preventDefault(); openModal(); }
 });
 
