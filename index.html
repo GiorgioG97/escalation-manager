@@ -258,6 +258,8 @@ td {
 }
 
 tr:hover td { background: var(--bg2); }
+tr.row-selected td { background: rgba(79,142,247,0.07); }
+tr.row-selected:hover td { background: rgba(79,142,247,0.12); }
 
 .ticket-cell {
   font-family: var(--mono);
@@ -502,6 +504,15 @@ tr:hover .action-btns { opacity: 1; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
 
+/* BULK BAR */
+.bulk-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px;
+  background: rgba(79,142,247,0.08);
+  border-bottom: 1px solid rgba(79,142,247,0.2);
+  flex-shrink: 0;
+}
+
 /* IMPORT PREVIEW */
 .import-drop {
   border: 1px dashed var(--border2);
@@ -600,10 +611,19 @@ tr:hover .action-btns { opacity: 1; }
       <span class="count-label" id="countLabel"></span>
     </div>
 
+    <div class="bulk-bar" id="bulkBar" style="display:none">
+      <span id="bulkCount" style="font-family:var(--mono);font-size:12px;color:var(--text2)"></span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="clearSelection()">Deseleziona</button>
+        <button class="btn btn-sm" style="background:var(--red-bg);border-color:rgba(239,68,68,.3);color:var(--red)" onclick="deleteSelected()">✕ Elimina selezionate</button>
+      </div>
+    </div>
+
     <div class="table-wrap">
       <table id="mainTable">
         <thead>
           <tr>
+            <th style="width:36px;padding:8px 6px 8px 14px"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)" style="cursor:pointer;accent-color:var(--accent)"></th>
             <th onclick="sortBy('ticket')">Ticket</th>
             <th onclick="sortBy('desc')">Descrizione</th>
             <th onclick="sortBy('tag')">Tag</th>
@@ -822,6 +842,7 @@ const DEFAULT_TAGS = [
 ];
 
 let data = [];
+let selectedIds = new Set();
 let customTags = [];   // [{name, color}]
 let editId = null;
 let sortField = 'dataAp';
@@ -960,6 +981,59 @@ function buildTagPills() {
   ).join('');
 }
 
+// ─── SELECTION ─────────────────────────────────────────────────────────
+function toggleRowSelect(cb) {
+  const id = cb.dataset.id;
+  if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+  cb.closest('tr').classList.toggle('row-selected', cb.checked);
+  updateBulkBar();
+  updateSelectAll();
+}
+
+function toggleSelectAll(cb) {
+  const visibleIds = getSorted(getFiltered()).map(d => d.id);
+  if (cb.checked) visibleIds.forEach(id => selectedIds.add(id));
+  else visibleIds.forEach(id => selectedIds.delete(id));
+  render();
+}
+
+function updateSelectAll() {
+  const cb = document.getElementById('selectAll');
+  if (!cb) return;
+  const visible = getSorted(getFiltered()).map(d => d.id);
+  const allSel = visible.length > 0 && visible.every(id => selectedIds.has(id));
+  const someSel = visible.some(id => selectedIds.has(id));
+  cb.checked = allSel;
+  cb.indeterminate = someSel && !allSel;
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const cnt = document.getElementById('bulkCount');
+  if (selectedIds.size > 0) {
+    bar.style.display = 'flex';
+    cnt.textContent = selectedIds.size + ' riga' + (selectedIds.size > 1 ? 'righe' : '') + ' selezionat' + (selectedIds.size > 1 ? 'e' : 'a');
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  render();
+}
+
+async function deleteSelected() {
+  if (!selectedIds.size) return;
+  const count = selectedIds.size;
+  if (!confirm(`Eliminare ${count} escalation selezionate?`)) return;
+  data = data.filter(d => !selectedIds.has(d.id));
+  selectedIds.clear();
+  render();
+  await saveData();
+  toast(`Eliminate ${count} escalation`, 'ok');
+}
+
 // ─── RENDER ────────────────────────────────────────────────────────────
 function getFiltered() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
@@ -1023,7 +1097,9 @@ function render() {
     stateMsg.style.display = 'none';
     tbody.innerHTML = rows.map(d => {
       const a = aging(d);
-      return `<tr>
+      const sel = selectedIds.has(d.id);
+      return `<tr class="${sel?'row-selected':''}">
+        <td style="padding:7px 6px 7px 14px"><input type="checkbox" class="row-cb" data-id="${d.id}" ${sel?'checked':''} onchange="toggleRowSelect(this)" style="cursor:pointer;accent-color:var(--accent)"></td>
         <td><span class="ticket-cell" title="${d.ticket}">${d.ticket}</span></td>
         <td title="${d.desc}">${trunc(d.desc, 38)}</td>
         <td>${tagBadge(d.tag)}</td>
@@ -1044,6 +1120,8 @@ function render() {
     }).join('');
   }
   updateSidebar();
+  updateBulkBar();
+  updateSelectAll();
 }
 
 // ─── SIDEBAR ───────────────────────────────────────────────────────────
