@@ -723,9 +723,19 @@ tr:hover .action-btns { opacity: 1; }
 
     <div class="bulk-bar" id="bulkBar" style="display:none">
       <span id="bulkCount" style="font-family:var(--mono);font-size:12px;color:var(--text2)"></span>
-      <div style="margin-left:auto;display:flex;gap:8px">
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <select id="bulkStatoSelect" style="padding:5px 28px 5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%235a6275\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 9px center">
+          <option value="">— cambia stato —</option>
+          <option value="open">open</option>
+          <option value="pending">pending</option>
+          <option value="da chiudere">da chiudere</option>
+          <option value="resolved">resolved</option>
+          <option value="closed">closed</option>
+        </select>
+        <button class="btn btn-sm" onclick="bulkChangeStato()">Applica</button>
+        <div style="width:1px;height:20px;background:var(--border2)"></div>
         <button class="btn btn-sm" onclick="clearSelection()">Deseleziona</button>
-        <button class="btn btn-sm" style="background:var(--red-bg);border-color:rgba(239,68,68,.3);color:var(--red)" onclick="deleteSelected()">✕ Elimina selezionate</button>
+        <button class="btn btn-sm" style="background:var(--red-bg);border-color:rgba(239,68,68,.3);color:var(--red)" onclick="deleteSelected()">✕ Elimina</button>
       </div>
     </div>
 
@@ -1198,15 +1208,28 @@ function updateBulkBar() {
   const cnt = document.getElementById('bulkCount');
   if (selectedIds.size > 0) {
     bar.style.display = 'flex';
-    cnt.textContent = selectedIds.size + ' riga' + (selectedIds.size > 1 ? 'righe' : '') + ' selezionat' + (selectedIds.size > 1 ? 'e' : 'a');
+    cnt.textContent = selectedIds.size + ' ' + (selectedIds.size === 1 ? 'riga selezionata' : 'righe selezionate');
   } else {
     bar.style.display = 'none';
+    document.getElementById('bulkStatoSelect').value = '';
   }
 }
 
 function clearSelection() {
   selectedIds.clear();
   render();
+}
+
+async function bulkChangeStato() {
+  const newStato = document.getElementById('bulkStatoSelect').value;
+  if (!newStato) { toast('Seleziona uno stato da applicare.', 'err'); return; }
+  const count = selectedIds.size;
+  data.forEach(d => { if (selectedIds.has(d.id)) d.stato = newStato; });
+  selectedIds.clear();
+  document.getElementById('bulkStatoSelect').value = '';
+  render();
+  await saveData();
+  toast(`${count} escalation impostate su "${newStato}"`, 'ok');
 }
 
 async function deleteSelected() {
