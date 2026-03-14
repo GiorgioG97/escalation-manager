@@ -1154,24 +1154,26 @@ function exportCSV() {
 // ─── IMPORT ────────────────────────────────────────────────────────────
 // Column mapping: original Excel headers → internal fields
 const COL_MAP = {
-  'ticket':           'ticket',
-  'descrizione':      'desc',
-  'tags':             'tag',
-  'tag':              'tag',
-  'p':                '',        // skip (priority col)
-  'shop':             'shop',
-  'am/sec':           'am',
-  'am':               'am',
-  'azione':           'azione',
-  'stato (assig.)':   'stato',
-  'stato':            'stato',
-  'in carico a':      'carico',
-  'data aper.':       'dataAp',
-  'data apertura':    'dataAp',
-  'note':             'note',
-  'data escalation':  'dataEsc',
-  'data escalatic':   'dataEsc',
-  'data chiusura':    'dataCh',
+  'ticket':                   'ticket',
+  'descrizione':              'desc',
+  'tags':                     'tag',
+  'tag':                      'tag',
+  'p':                        '',
+  'shop':                     'shop',
+  'am/sec':                   'am',
+  'am':                       'am',
+  'azione':                   'azione',
+  'stato (assig.)':           'stato',
+  'stato (assign group)':     'stato',
+  'stato (assignment group)': 'stato',
+  'stato':                    'stato',
+  'in carico a':              'carico',
+  'data aper.':               'dataAp',
+  'data apertura':            'dataAp',
+  'note':                     'note',
+  'data escalation':          'dataEsc',
+  'data escalatic':           'dataEsc',
+  'data chiusura':            'dataCh',
 };
 
 function openImportModal() {
@@ -1254,7 +1256,17 @@ function parseImportRows(rawRows) {
   }
   const headers = rawRows[headerIdx].map(h => String(h||'').toLowerCase().trim());
   const colIdx = {}; // fieldName → column index
-  headers.forEach((h, i) => { const mapped = COL_MAP[h]; if (mapped) colIdx[mapped] = i; });
+  headers.forEach((h, i) => {
+    const mapped = COL_MAP[h];
+    if (mapped) { colIdx[mapped] = i; return; }
+    // fuzzy fallback
+    if (h.startsWith('stato')) colIdx['stato'] = i;
+    else if (h.startsWith('data aper') || h.startsWith('data ap')) colIdx['dataAp'] = i;
+    else if (h.startsWith('data chi')) colIdx['dataCh'] = i;
+    else if (h.startsWith('data esc') || h.startsWith('data esc')) colIdx['dataEsc'] = i;
+    else if (h.includes('carico')) colIdx['carico'] = i;
+    else if (h.startsWith('am/') || h === 'am') colIdx['am'] = i;
+  });
 
   importRows = rawRows.slice(headerIdx + 1).filter(r => r.some(c => c !== '' && c !== null && c !== undefined)).map((r, ri) => {
     const obj = { id: String(Date.now() + ri) };
