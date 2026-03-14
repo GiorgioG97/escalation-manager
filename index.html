@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escalation Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #161b27;
+  --bg3: #1e2535;
+  --bg4: #252d3f;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8ecf4;
+  --text2: #8b95a8;
+  --text3: #5a6275;
+  --accent: #4f8ef7;
+  --accent2: #2563eb;
+  --green: #22c55e;
+  --green-bg: rgba(34,197,94,0.12);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --blue-bg: rgba(79,142,247,0.12);
+  --purple: #a78bfa;
+  --purple-bg: rgba(167,139,250,0.12);
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* LAYOUT */
+.app { display: flex; height: 100vh; overflow: hidden; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sidebar {
+  width: 320px; flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+
+/* TOPBAR */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.topbar-logo span { color: var(--text3); }
+
+.topbar-sep { flex: 1; }
+
+.sync-indicator {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: background .3s;
+}
+.sync-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.sync-dot.loading { background: var(--amber); animation: pulse 1s infinite; }
+.sync-dot.err { background: var(--red); }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* BUTTONS */
+.btn {
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--sans);
+  font-weight: 500;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg4); border-color: var(--border2); }
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #1d4ed8; }
+
+.btn-sm { padding: 4px 9px; font-size: 11px; }
+
+/* FILTER BAR */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1; min-width: 180px; max-width: 280px;
+}
+.search-wrap input {
+  width: 100%; padding: 6px 10px 6px 30px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+}
+.search-wrap input:focus { outline: none; border-color: var(--accent); }
+.search-icon {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); font-size: 12px; pointer-events: none;
+}
+
+select {
+  padding: 6px 28px 6px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6275'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+select:focus { outline: none; border-color: var(--accent); }
+select option { background: #1e2535; }
+
+.count-label {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* TABLE */
+.table-wrap {
+  flex: 1; overflow: auto;
+  background: var(--bg);
+}
+
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px;
+}
+
+th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky; top: 0; z-index: 2;
+  cursor: pointer;
+  user-select: none;
+}
+th:hover { color: var(--text2); }
+th.sort-asc::after { content: ' ↑'; color: var(--accent); }
+th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+tr:hover td { background: var(--bg2); }
+
+.ticket-cell {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* BADGES */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.badge-open     { background: var(--blue-bg); color: var(--accent); border: 1px solid rgba(79,142,247,.2); }
+.badge-closed   { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+.badge-resolved { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+.badge-pending  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,.2); }
+.badge-dachiudere { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(167,139,250,.2); }
+
+.tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--mono);
+}
+.tag-shop     { background: rgba(34,197,94,.1); color: #4ade80; }
+.tag-utenza   { background: rgba(79,142,247,.1); color: #93bbfc; }
+.tag-matricola { background: rgba(245,158,11,.1); color: #fbbf24; }
+.tag-dbfull   { background: rgba(239,68,68,.1); color: #f87171; }
+.tag-altro    { background: rgba(255,255,255,.05); color: var(--text2); }
+
+/* AGING */
+.age-ok   { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.age-warn { font-family: var(--mono); font-size: 11px; color: var(--amber); font-weight: 500; }
+.age-crit { font-family: var(--mono); font-size: 11px; color: var(--red); font-weight: 500; }
+.age-closed { font-family: var(--mono); font-size: 11px; color: var(--text3); text-decoration: line-through; }
+
+/* ACTION BUTTONS */
+.action-btns { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+tr:hover .action-btns { opacity: 1; }
+
+.btn-icon {
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all .15s;
+}
+.btn-icon:hover { background: var(--bg4); color: var(--text); }
+.btn-del:hover { background: var(--red-bg); color: var(--red); border-color: rgba(239,68,68,.3); }
+
+/* EMPTY / LOADING */
+.state-full {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 20px;
+  color: var(--text3);
+  gap: 10px;
+  font-size: 13px;
+}
+.state-full .icon { font-size: 28px; opacity: .4; }
+
+/* SIDEBAR */
+.sb-header {
+  padding: 16px 16px 0;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.metrics-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; padding: 10px 16px 16px;
+}
+
+.metric-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.metric-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.metric-value { font-size: 22px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+.metric-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+.mv-blue { color: var(--accent); }
+.mv-red  { color: var(--red); }
+.mv-amber { color: var(--amber); }
+.mv-green { color: var(--green); }
+.mv-white { color: var(--text); }
+
+.sb-divider { height: 1px; background: var(--border); margin: 0; }
+
+.sb-section { padding: 14px 16px; }
+.sb-section-title {
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); font-family: var(--mono); margin-bottom: 10px;
+}
+
+/* ATTN LIST */
+.attn-item {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.attn-item:last-child { border-bottom: none; }
+.attn-ticket { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--accent); }
+.attn-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.attn-age { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--red); white-space: nowrap; padding-left: 8px; }
+
+/* STAT ROWS */
+.stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-count { font-family: var(--mono); font-weight: 500; color: var(--text); }
+
+/* AGING BAR */
+.aging-bar-wrap { margin-top: 8px; }
+.aging-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; color: var(--text2); }
+.aging-bar-label { width: 60px; flex-shrink: 0; font-family: var(--mono); font-size: 10px; color: var(--text3); }
+.aging-bar-track { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.aging-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.aging-bar-num { width: 20px; text-align: right; font-family: var(--mono); font-size: 10px; color: var(--text3); }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 580px; max-width: 95vw;
+  max-height: 90vh; overflow-y: auto;
+  animation: modalIn .15s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+
+.modal-title {
+  font-size: 15px; font-weight: 600; color: var(--text);
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-title-badge {
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 500;
+  padding: 2px 8px;
+  background: var(--blue-bg);
+  color: var(--accent);
+  border-radius: 3px;
+  border: 1px solid rgba(79,142,247,.2);
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-grid.full { grid-template-columns: 1fr; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+.form-group label {
+  display: block;
+  font-size: 11px; font-weight: 500; color: var(--text3);
+  margin-bottom: 5px; letter-spacing: .04em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  transition: border-color .15s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { outline: none; border-color: var(--accent); }
+.form-group textarea { resize: vertical; min-height: 64px; line-height: 1.5; }
+.form-group select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6275'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 9px center; padding-right: 28px; }
+.form-group select option { background: #1e2535; }
+
+.form-section-title {
+  font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); margin: 16px 0 10px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* TOAST */
+.toast-wrap {
+  position: fixed; bottom: 20px; right: 20px; z-index: 200;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  animation: toastIn .2s ease;
+  display: flex; align-items: center; gap: 8px;
+}
+@keyframes toastIn { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:none} }
+.toast-ok   { border-color: rgba(34,197,94,.3); }
+.toast-err  { border-color: rgba(239,68,68,.3); }
+.toast-icon { font-size: 13px; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="topbar">
+      <div class="topbar-logo">ESC<span>//</span>TRACKER</div>
+      <div class="topbar-sep"></div>
+      <div class="sync-indicator">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel">—</span>
+      </div>
+      <button class="btn btn-sm" onclick="loadData()">↻ Ricarica</button>
+      <button class="btn btn-sm" onclick="exportCSV()">↓ CSV</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Nuova escalation</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" type="text" placeholder="Cerca ticket, shop, descrizione..." oninput="render()">
+      </div>
+      <select id="filterStatus" onchange="render()">
+        <option value="">Tutti gli stati</option>
+        <option value="open">open</option>
+        <option value="closed">closed</option>
+        <option value="resolved">resolved</option>
+        <option value="pending">pending</option>
+        <option value="da chiudere">da chiudere</option>
+      </select>
+      <select id="filterTag" onchange="render()">
+        <option value="">Tutti i tag</option>
+        <option value="shop">shop</option>
+        <option value="utenza">utenza</option>
+        <option value="matricola">matricola</option>
+        <option value="db full">db full</option>
+      </select>
+      <select id="filterAging" onchange="render()">
+        <option value="">Tutti</option>
+        <option value="critical">Critici (&gt;14gg)</option>
+        <option value="warn">Attenzione (7–14gg)</option>
+      </select>
+      <span class="count-label" id="countLabel"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('ticket')">Ticket</th>
+            <th onclick="sortBy('desc')">Descrizione</th>
+            <th onclick="sortBy('tag')">Tag</th>
+            <th onclick="sortBy('shop')">Shop</th>
+            <th onclick="sortBy('am')">AM / Ref</th>
+            <th>Azione in corso</th>
+            <th onclick="sortBy('stato')">Stato</th>
+            <th onclick="sortBy('carico')">In carico a</th>
+            <th onclick="sortBy('dataAp')">Data apertura</th>
+            <th onclick="sortBy('_age')">Ageing</th>
+            <th>Note</th>
+            <th onclick="sortBy('dataCh')">Data chiusura</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="stateMsg" class="state-full" style="display:none">
+        <div class="icon">◌</div>
+        <div id="stateMsgText">Nessun risultato.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sb-header" style="padding-top:16px">Panoramica</div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Totali</div><div class="metric-value mv-white" id="mTot">—</div></div>
+      <div class="metric-card"><div class="metric-label">Open / pending</div><div class="metric-value mv-blue" id="mOpen">—</div></div>
+      <div class="metric-card"><div class="metric-label">Ageing medio</div><div class="metric-value mv-amber" id="mAvg">—</div><div class="metric-sub">giorni (aperti)</div></div>
+      <div class="metric-card"><div class="metric-label">Critici &gt;14gg</div><div class="metric-value mv-red" id="mCrit">—</div></div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-section-title">Da attenzionare</div>
+      <div id="attnList"><div style="font-size:11px;color:var(--text3)">Caricamento…</div></div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-section-title">Distribuzione ageing</div>
+      <div class="aging-bar-wrap" id="agingBars"></div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-section-title">Per tag</div>
+      <div id="tagStats"></div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">
+      <div class="sb-section-title">Per stato</div>
+      <div id="statusStats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modalTitleText">Nuova escalation</span>
+      <span class="modal-title-badge" id="modalBadge" style="display:none"></span>
+    </div>
+
+    <div class="form-section-title">Identificazione</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Ticket *</label><input id="fTicket" placeholder="INC2XXXXXX / RITM…"></div>
+      <div class="form-group"><label>Tag</label>
+        <select id="fTag">
+          <option value="">—</option>
+          <option value="shop">shop</option>
+          <option value="utenza">utenza</option>
+          <option value="matricola">matricola</option>
+          <option value="db full">db full</option>
+          <option value="altro">altro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid full">
+      <div class="form-group"><label>Descrizione</label><textarea id="fDesc" rows="2" placeholder="Descrizione sintetica"></textarea></div>
+    </div>
+
+    <div class="form-section-title">Riferimenti</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Shop / Filiale</label><input id="fShop" placeholder="Es. 06I Udine"></div>
+      <div class="form-group"><label>AM / Referente</label><input id="fAm" placeholder="Nome cognome"></div>
+    </div>
+
+    <div class="form-section-title">Gestione</div>
+    <div class="form-grid full">
+      <div class="form-group"><label>Azione in corso</label><textarea id="fAzione" rows="2" placeholder="Cosa si sta facendo…"></textarea></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Stato</label>
+        <select id="fStato">
+          <option value="open">open</option>
+          <option value="pending">pending</option>
+          <option value="da chiudere">da chiudere</option>
+          <option value="resolved">resolved</option>
+          <option value="closed">closed</option>
+        </select>
+      </div>
+      <div class="form-group"><label>In carico a</label><input id="fCarico" placeholder="Es. supporto fox, 2L BO…"></div>
+    </div>
+    <div class="form-grid full">
+      <div class="form-group"><label>Note</label><textarea id="fNote" rows="2" placeholder="Eventuali note aggiuntive…"></textarea></div>
+    </div>
+
+    <div class="form-section-title">Date</div>
+    <div class="form-grid three">
+      <div class="form-group"><label>Data apertura *</label><input type="date" id="fDataAp"></div>
+      <div class="form-group"><label>Data escalation</label><input type="date" id="fDataEsc"></div>
+      <div class="form-group"><label>Data chiusura</label><input type="date" id="fDataCh"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Annulla</button>
+      <button class="btn btn-primary" onclick="saveModal()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxEy9XIj6_xloR2z0s3JddlUfnfwCitMnKxD4VBFw3w6KsQY1CXM4W_A-z3EfPFd6I/exec';
+
+const FIELDS = ['id','ticket','desc','tag','shop','am','azione','stato','carico','dataAp','dataEsc','dataCh','note'];
+
+let data = [];
+let editId = null;
+let sortField = 'dataAp';
+let sortDir = -1;
+let saving = false;
+
+// ─── SYNC ──────────────────────────────────────────────────────────────
+function setSyncState(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + (state==='ok'?'ok':state==='loading'?'loading':'err');
+  lbl.textContent = label;
+}
+
+async function loadData() {
+  setSyncState('loading', 'caricamento…');
+  try {
+    const res = await fetch(SHEET_URL + '?action=read&t=' + Date.now());
+    const rows = await res.json();
+    if (!Array.isArray(rows)) throw new Error('formato non valido');
+    // row 0 = header, skip if first cell == 'id'
+    const start = (rows[0] && rows[0][0] === 'id') ? 1 : 0;
+    data = rows.slice(start).filter(r => r[0]).map(r => {
+      const obj = {};
+      FIELDS.forEach((f,i) => obj[f] = r[i] !== undefined ? String(r[i]) : '');
+      return obj;
+    });
+    setSyncState('ok', 'sincronizzato ' + new Date().toLocaleTimeString('it'));
+    render();
+    toast('Dati caricati — ' + data.length + ' escalation', 'ok');
+  } catch(e) {
+    setSyncState('err', 'errore connessione');
+    toast('Errore nel caricamento: ' + e.message, 'err');
+  }
+}
+
+async function saveData() {
+  if (saving) return;
+  saving = true;
+  setSyncState('loading', 'salvataggio…');
+  try {
+    const header = FIELDS;
+    const rows = [header, ...data.map(d => FIELDS.map(f => d[f] || ''))];
+    const res = await fetch(SHEET_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'write', rows })
+    });
+    const result = await res.json();
+    if (!result.ok) throw new Error('risposta non ok');
+    setSyncState('ok', 'salvato ' + new Date().toLocaleTimeString('it'));
+  } catch(e) {
+    setSyncState('err', 'errore salvataggio');
+    toast('Errore nel salvataggio: ' + e.message, 'err');
+  }
+  saving = false;
+}
+
+// ─── AGING ─────────────────────────────────────────────────────────────
+function aging(item) {
+  if (!item.dataAp) return null;
+  const end = item.dataCh ? new Date(item.dataCh) : new Date();
+  const start = new Date(item.dataAp);
+  if (isNaN(start)) return null;
+  return Math.floor((end - start) / 86400000);
+}
+
+function isClosed(item) { return item.stato === 'closed' || item.stato === 'resolved'; }
+
+// ─── RENDER ────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const fS = document.getElementById('filterStatus').value;
+  const fT = document.getElementById('filterTag').value;
+  const fA = document.getElementById('filterAging').value;
+  return data.filter(d => {
+    if (q && !['ticket','desc','shop','am','azione','note','carico'].some(f => (d[f]||'').toLowerCase().includes(q))) return false;
+    if (fS && d.stato !== fS) return false;
+    if (fT && d.tag !== fT) return false;
+    if (fA) {
+      const a = aging(d); const open = !isClosed(d);
+      if (fA === 'critical' && !(open && a !== null && a > 14)) return false;
+      if (fA === 'warn' && !(open && a !== null && a >= 7 && a <= 14)) return false;
+    }
+    return true;
+  });
+}
+
+function getSorted(arr) {
+  return [...arr].sort((a, b) => {
+    let va = sortField === '_age' ? (aging(a) ?? -1) : (a[sortField] || '');
+    let vb = sortField === '_age' ? (aging(b) ?? -1) : (b[sortField] || '');
+    if (va < vb) return -sortDir;
+    if (va > vb) return sortDir;
+    return 0;
+  });
+}
+
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; }
+  document.querySelectorAll('th').forEach(th => th.className = '');
+  event.currentTarget.className = sortDir === 1 ? 'sort-asc' : 'sort-desc';
+  render();
+}
+
+function tagBadge(tag) {
+  const map = {shop:'tag-shop',utenza:'tag-utenza',matricola:'tag-matricola','db full':'tag-dbfull'};
+  return tag ? `<span class="tag ${map[tag]||'tag-altro'}">${tag}</span>` : '';
+}
+
+function statoBadge(s) {
+  const cls = {'open':'open','closed':'closed','resolved':'resolved','pending':'pending','da chiudere':'dachiudere'}[s] || 'open';
+  return `<span class="badge badge-${cls}">${s}</span>`;
+}
+
+function agingCell(a, item) {
+  if (a === null) return '<span class="age-ok">—</span>';
+  if (isClosed(item)) return `<span class="age-closed">${a}gg</span>`;
+  if (a > 14) return `<span class="age-crit">⚑ ${a}gg</span>`;
+  if (a > 7)  return `<span class="age-warn">△ ${a}gg</span>`;
+  return `<span class="age-ok">${a}gg</span>`;
+}
+
+function trunc(s, n) { s = s || ''; return s.length > n ? s.slice(0,n) + '…' : s; }
+
+function render() {
+  const rows = getSorted(getFiltered());
+  const tbody = document.getElementById('tbody');
+  const stateMsg = document.getElementById('stateMsg');
+  document.getElementById('countLabel').textContent = rows.length + ' / ' + data.length;
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    stateMsg.style.display = 'flex';
+    document.getElementById('stateMsgText').textContent = data.length ? 'Nessun risultato per i filtri attivi.' : 'Nessuna escalation. Aggiungine una!';
+  } else {
+    stateMsg.style.display = 'none';
+    tbody.innerHTML = rows.map(d => {
+      const a = aging(d);
+      return `<tr>
+        <td><span class="ticket-cell" title="${d.ticket}">${d.ticket}</span></td>
+        <td title="${d.desc}">${trunc(d.desc, 38)}</td>
+        <td>${tagBadge(d.tag)}</td>
+        <td title="${d.shop}">${trunc(d.shop, 20)}</td>
+        <td title="${d.am}">${trunc(d.am, 18)}</td>
+        <td title="${d.azione}">${trunc(d.azione, 38)}</td>
+        <td>${statoBadge(d.stato)}</td>
+        <td title="${d.carico}">${trunc(d.carico, 20)}</td>
+        <td>${d.dataAp || '—'}</td>
+        <td>${agingCell(a, d)}</td>
+        <td title="${d.note}">${trunc(d.note, 28)}</td>
+        <td>${d.dataCh || '—'}</td>
+        <td><div class="action-btns">
+          <button class="btn-icon" onclick="editItem('${d.id}')" title="Modifica">✎</button>
+          <button class="btn-icon btn-del" onclick="deleteItem('${d.id}')" title="Elimina">✕</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+  updateSidebar();
+}
+
+// ─── SIDEBAR ───────────────────────────────────────────────────────────
+function updateSidebar() {
+  const open = data.filter(d => !isClosed(d));
+  const ages = open.map(d => aging(d)).filter(a => a !== null);
+  const avg = ages.length ? Math.round(ages.reduce((a,b) => a+b, 0) / ages.length) : 0;
+  const crit = open.filter(d => { const a = aging(d); return a !== null && a > 14; });
+
+  document.getElementById('mTot').textContent = data.length;
+  document.getElementById('mOpen').textContent = open.length;
+  document.getElementById('mAvg').textContent = avg;
+  document.getElementById('mCrit').textContent = crit.length;
+
+  // attenzionare
+  const sorted = [...open].filter(d => aging(d) !== null).sort((a,b) => aging(b)-aging(a)).slice(0,6);
+  document.getElementById('attnList').innerHTML = sorted.length
+    ? sorted.map(d => `<div class="attn-item">
+        <div>
+          <div class="attn-ticket">${d.ticket}</div>
+          <div class="attn-meta">${trunc(d.carico||'—',22)} · ${trunc(d.shop||'—',16)}</div>
+        </div>
+        <span class="attn-age">${aging(d)}gg</span>
+      </div>`).join('')
+    : '<div style="font-size:11px;color:var(--text3)">Nessun caso aperto.</div>';
+
+  // aging distribution
+  const buckets = [
+    {label:'0–3gg', min:0, max:3, color:'#22c55e'},
+    {label:'4–7gg', min:4, max:7, color:'#84cc16'},
+    {label:'8–14gg', min:8, max:14, color:'#f59e0b'},
+    {label:'&gt;14gg', min:15, max:9999, color:'#ef4444'},
+  ];
+  const openAges = open.map(d => aging(d)).filter(a => a !== null);
+  const maxCount = Math.max(1, ...buckets.map(b => openAges.filter(a => a >= b.min && a <= b.max).length));
+  document.getElementById('agingBars').innerHTML = buckets.map(b => {
+    const cnt = openAges.filter(a => a >= b.min && a <= b.max).length;
+    const pct = Math.round(cnt / maxCount * 100);
+    return `<div class="aging-bar-row">
+      <span class="aging-bar-label">${b.label}</span>
+      <div class="aging-bar-track"><div class="aging-bar-fill" style="width:${pct}%;background:${b.color}"></div></div>
+      <span class="aging-bar-num">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // tag stats
+  const tagC = {};
+  data.forEach(d => { const t = d.tag||'altro'; tagC[t] = (tagC[t]||0)+1; });
+  document.getElementById('tagStats').innerHTML = Object.entries(tagC).sort((a,b)=>b[1]-a[1]).map(([t,n]) =>
+    `<div class="stat-row">${tagBadge(t)}<span class="stat-count">${n}</span></div>`).join('');
+
+  // status stats
+  const stC = {};
+  data.forEach(d => { stC[d.stato] = (stC[d.stato]||0)+1; });
+  document.getElementById('statusStats').innerHTML = Object.entries(stC).sort((a,b)=>b[1]-a[1]).map(([s,n]) =>
+    `<div class="stat-row">${statoBadge(s)}<span class="stat-count">${n}</span></div>`).join('');
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────────
+function openModal(id = null) {
+  editId = id;
+  const d = id ? data.find(x => x.id === id) : {};
+  document.getElementById('modalTitleText').textContent = id ? 'Modifica escalation' : 'Nuova escalation';
+  const badge = document.getElementById('modalBadge');
+  if (id && d) { badge.textContent = d.ticket; badge.style.display = 'inline-block'; }
+  else { badge.style.display = 'none'; }
+  document.getElementById('fTicket').value = d?.ticket || '';
+  document.getElementById('fDesc').value = d?.desc || '';
+  document.getElementById('fTag').value = d?.tag || '';
+  document.getElementById('fShop').value = d?.shop || '';
+  document.getElementById('fAm').value = d?.am || '';
+  document.getElementById('fAzione').value = d?.azione || '';
+  document.getElementById('fStato').value = d?.stato || 'open';
+  document.getElementById('fCarico').value = d?.carico || '';
+  document.getElementById('fDataAp').value = d?.dataAp || new Date().toISOString().slice(0,10);
+  document.getElementById('fDataEsc').value = d?.dataEsc || '';
+  document.getElementById('fDataCh').value = d?.dataCh || '';
+  document.getElementById('fNote').value = d?.note || '';
+  document.getElementById('modalOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('fTicket').focus(), 50);
+}
+
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+async function saveModal() {
+  const ticket = document.getElementById('fTicket').value.trim();
+  const dataAp = document.getElementById('fDataAp').value;
+  if (!ticket || !dataAp) { toast('Ticket e data apertura sono obbligatori.', 'err'); return; }
+  const obj = {
+    id: editId || String(Date.now()),
+    ticket, desc: document.getElementById('fDesc').value.trim(),
+    tag: document.getElementById('fTag').value,
+    shop: document.getElementById('fShop').value.trim(),
+    am: document.getElementById('fAm').value.trim(),
+    azione: document.getElementById('fAzione').value.trim(),
+    stato: document.getElementById('fStato').value,
+    carico: document.getElementById('fCarico').value.trim(),
+    dataAp, dataEsc: document.getElementById('fDataEsc').value,
+    dataCh: document.getElementById('fDataCh').value,
+    note: document.getElementById('fNote').value.trim()
+  };
+  if (editId) { const i = data.findIndex(x => x.id === editId); if (i > -1) data[i] = obj; }
+  else data.push(obj);
+  closeModal();
+  render();
+  await saveData();
+  toast(editId ? 'Escalation aggiornata' : 'Escalation aggiunta', 'ok');
+}
+
+function editItem(id) { openModal(id); }
+
+async function deleteItem(id) {
+  const d = data.find(x => x.id === id);
+  if (!confirm(`Eliminare ${d?.ticket || 'questa escalation'}?`)) return;
+  data = data.filter(x => x.id !== id);
+  render();
+  await saveData();
+  toast('Escalation eliminata', 'ok');
+}
+
+// ─── EXPORT ────────────────────────────────────────────────────────────
+function exportCSV() {
+  const heads = [...FIELDS, 'ageing'];
+  const rows = data.map(d => [...FIELDS.map(f => d[f]||''), aging(d)??''].map(v => '"'+String(v).replace(/"/g,'""')+'"').join(','));
+  const csv = [heads.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'escalation_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.innerHTML = `<span class="toast-icon">${type==='ok'?'✓':'⚠'}</span> ${msg}`;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3000);
+}
+
+// ─── KEYBOARD ──────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.metaKey||e.ctrlKey) && e.key === 'n') { e.preventDefault(); openModal(); }
+});
+
+// ─── INIT ──────────────────────────────────────────────────────────────
+setSyncState('loading', 'connessione…');
+loadData();
+</script>
+</body>
+</html>
