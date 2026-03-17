@@ -702,7 +702,7 @@ tr:hover .action-btns { opacity: 1; }
       </div>
       <div class="pill-group" id="pillStatus">
         <span class="pill-label">Stato</span>
-        <button class="pill active" data-val="open" onclick="togglePill(this,'status')">open</button>
+        <button class="pill" data-val="open" onclick="togglePill(this,'status')">open</button>
         <button class="pill" data-val="pending" onclick="togglePill(this,'status')">pending</button>
         <button class="pill" data-val="da chiudere" onclick="togglePill(this,'status')">da chiudere</button>
         <button class="pill" data-val="resolved" onclick="togglePill(this,'status')">resolved</button>
@@ -1133,7 +1133,7 @@ function aging(item) {
   if (isNaN(start)) return null;
   return Math.floor((end - start) / 86400000);
 }
-function isClosed(item) { return item.stato === 'closed' || item.stato === 'resolved'; }
+function isClosed(item) { const s = (item.stato||'').toLowerCase().trim(); return s === 'closed' || s === 'resolved'; }
 
 // ─── PILL FILTERS ──────────────────────────────────────────────────────
 // State: sets of active values. Empty set = "all"
@@ -1251,7 +1251,7 @@ function getFiltered() {
   const fA = activeFilters.aging;
   return data.filter(d => {
     if (q && !['ticket','desc','shop','am','azione','note','carico'].some(f => (d[f]||'').toLowerCase().includes(q))) return false;
-    if (fS.size && !fS.has(d.stato)) return false;
+    if (fS.size && !fS.has((d.stato||'').toLowerCase().trim())) return false;
     if (fT.size && !fT.has(d.tag)) return false;
     if (fA.size) {
       const a = aging(d); const open = !isClosed(d);
