@@ -852,15 +852,15 @@ tr:hover .action-btns { opacity: 1; }
     <div class="an-charts-grid">
       <div class="an-card">
         <div class="an-card-title">Ageing medio per mese (gg)</div>
-        <canvas id="chartAgeing" height="140"></canvas>
+        <div style="height:140px"><canvas id="chartAgeing"></canvas></div>
       </div>
       <div class="an-card">
         <div class="an-card-title">Distribuzione per categoria</div>
-        <canvas id="chartTag" height="140"></canvas>
+        <div style="height:140px"><canvas id="chartTag"></canvas></div>
       </div>
       <div class="an-card">
         <div class="an-card-title">TTS medio per mese (gg)</div>
-        <canvas id="chartTts" height="140"></canvas>
+        <div style="height:140px"><canvas id="chartTts"></canvas></div>
       </div>
       <div class="an-card">
         <div class="an-card-title">Ticket aperti vs chiusi per mese</div>
@@ -1836,7 +1836,7 @@ function renderAnalytics() {
       labels: allMonths.map(monthLabel),
       datasets: [{ label: 'Ageing medio (gg)', data: ageByMonth, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, pointRadius: 5, pointBackgroundColor: '#f59e0b', fill: true, spanGaps: true }]
     },
-    options: { ...chartDefaults() }
+    options: { ...chartDefaults(), maintainAspectRatio: false }
   });
 
   // ── Chart 2: Distribuzione per tag (doughnut) ──
@@ -1848,7 +1848,7 @@ function renderAnalytics() {
   anCharts['chartTag'] = new Chart(ctx2, {
     type: 'doughnut',
     data: { labels: tagLabels, datasets: [{ data: tagLabels.map(t=>tagCount[t]), backgroundColor: CHART_COLORS.slice(0,tagLabels.length), borderWidth: 0, hoverOffset: 6 }] },
-    options: { plugins: { legend: { position: 'right', labels: { color: '#8b95a8', font: { size: 11 }, boxWidth: 12, padding: 10 } } }, cutout: '62%' }
+    options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#8b95a8', font: { size: 11 }, boxWidth: 12, padding: 10 } } }, cutout: '62%' }
   });
 
   // ── Chart 3: TTS medio per mese ──
@@ -1865,7 +1865,7 @@ function renderAnalytics() {
       labels: allMonths.map(monthLabel),
       datasets: [{ label: 'TTS medio (gg)', data: ttsByMonth, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', tension: 0.3, pointRadius: 5, pointBackgroundColor: '#a78bfa', fill: true, spanGaps: true }]
     },
-    options: { ...chartDefaults() }
+    options: { ...chartDefaults(), maintainAspectRatio: false }
   });
 
   // ── Chart 4: Aperti vs chiusi per mese ──
