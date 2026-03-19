@@ -122,7 +122,7 @@ body {
 
 .an-charts-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
 }
 .an-charts-grid.full { grid-template-columns: 1fr; }
@@ -844,40 +844,39 @@ tr:hover .action-btns { opacity: 1; }
     </div>
 
     <!-- KPI row -->
-    <div class="an-kpi-row">
+    <div class="an-kpi-row" style="grid-template-columns:repeat(5,1fr)">
       <div class="an-kpi"><div class="an-kpi-label">Ticket nel periodo</div><div class="an-kpi-value" id="anKpiTot" style="color:var(--text)">—</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">Ageing medio</div><div class="an-kpi-value" id="anKpiAvg" style="color:var(--amber)">—</div><div class="an-kpi-sub">giorni</div></div>
+      <div class="an-kpi"><div class="an-kpi-label">Ageing medio</div><div class="an-kpi-value" id="anKpiAvg" style="color:var(--amber)">—</div><div class="an-kpi-sub">giorni (aperti)</div></div>
+      <div class="an-kpi"><div class="an-kpi-label">TTS medio</div><div class="an-kpi-value" id="anKpiTts" style="color:var(--purple)">—</div><div class="an-kpi-sub">giorni (ap. → chiusura)</div></div>
       <div class="an-kpi"><div class="an-kpi-label">Tempo medio risoluzione</div><div class="an-kpi-value" id="anKpiRes" style="color:var(--green)">—</div><div class="an-kpi-sub">giorni (chiusi)</div></div>
       <div class="an-kpi"><div class="an-kpi-label">% risolti</div><div class="an-kpi-value" id="anKpiPct" style="color:var(--accent)">—</div></div>
     </div>
 
     <div class="an-charts-grid">
-      <!-- Trend ageing medio per mese -->
       <div class="an-card">
         <div class="an-card-title">Ageing medio per mese (gg)</div>
         <canvas id="chartAgeing" height="200"></canvas>
       </div>
-      <!-- Distribuzione per tag -->
       <div class="an-card">
         <div class="an-card-title">Distribuzione per categoria</div>
         <canvas id="chartTag" height="200"></canvas>
       </div>
-      <!-- Ticket aperti per mese -->
+      <div class="an-card">
+        <div class="an-card-title">TTS medio per mese (gg)</div>
+        <canvas id="chartTts" height="200"></canvas>
+      </div>
       <div class="an-card">
         <div class="an-card-title">Ticket aperti vs chiusi per mese</div>
         <canvas id="chartMonthly" height="200"></canvas>
       </div>
-      <!-- Tempo medio risoluzione per tag -->
       <div class="an-card">
-        <div class="an-card-title">Tempo medio risoluzione per categoria (gg)</div>
+        <div class="an-card-title">TTS medio per categoria (gg)</div>
         <canvas id="chartResTag" height="200"></canvas>
       </div>
-    </div>
-
-    <!-- Top in carico a -->
-    <div class="an-card" style="margin-top:16px">
-      <div class="an-card-title">Carico per team / persona</div>
-      <table class="an-table" id="anTableCarico"></table>
+      <div class="an-card">
+        <div class="an-card-title">Carico per team / persona</div>
+        <table class="an-table" id="anTableCarico"></table>
+      </div>
     </div>
 
   </div><!-- end analytics page -->
@@ -1806,12 +1805,10 @@ function renderAnalytics() {
   const subset = getAnData();
 
   // ── KPIs ──
-  const closed = subset.filter(d => isClosed(d) && d.dataCh);
-  const resolveTimes = closed.map(d => {
-    const a = new Date(d.dataCh) - new Date(d.dataAp);
-    return Math.floor(a / 86400000);
-  }).filter(n => n >= 0);
-  const avgRes = resolveTimes.length ? Math.round(resolveTimes.reduce((a,b)=>a+b,0)/resolveTimes.length) : null;
+  const closed = subset.filter(d => isClosed(d) && d.dataCh && d.dataAp);
+  const ttsTimes = closed.map(d => Math.floor((new Date(d.dataCh) - new Date(d.dataAp)) / 86400000)).filter(n => n >= 0);
+  const avgTts = ttsTimes.length ? Math.round(ttsTimes.reduce((a,b)=>a+b,0)/ttsTimes.length) : null;
+  const avgRes = avgTts; // TTS e risoluzione sono lo stesso calcolo
   const openSubset = subset.filter(d => !isClosed(d));
   const ages = openSubset.map(d => aging(d)).filter(a => a !== null);
   const avgAge = ages.length ? Math.round(ages.reduce((a,b)=>a+b,0)/ages.length) : null;
@@ -1819,6 +1816,7 @@ function renderAnalytics() {
 
   document.getElementById('anKpiTot').textContent = subset.length;
   document.getElementById('anKpiAvg').textContent = avgAge !== null ? avgAge+'gg' : '—';
+  document.getElementById('anKpiTts').textContent = avgTts !== null ? avgTts+'gg' : '—';
   document.getElementById('anKpiRes').textContent = avgRes !== null ? avgRes+'gg' : '—';
   document.getElementById('anKpiPct').textContent = pctRes !== null ? pctRes+'%' : '—';
 
@@ -1828,18 +1826,18 @@ function renderAnalytics() {
   // ── Chart 1: Ageing medio per mese ──
   destroyChart('chartAgeing');
   const ageByMonth = allMonths.map(m => {
-    const rows = subset.filter(d => monthKey(d.dataAp) === m);
+    const rows = subset.filter(d => monthKey(d.dataAp) === m && !isClosed(d));
     const a = rows.map(d => aging(d)).filter(v => v !== null);
-    return a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : 0;
+    return a.length ? Math.round(a.reduce((x,y)=>x+y,0)/a.length) : null;
   });
   const ctx1 = document.getElementById('chartAgeing').getContext('2d');
   anCharts['chartAgeing'] = new Chart(ctx1, {
     type: 'line',
     data: {
       labels: allMonths.map(monthLabel),
-      datasets: [{ label: 'Ageing medio (gg)', data: ageByMonth, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f59e0b', fill: true }]
+      datasets: [{ label: 'Ageing medio (gg)', data: ageByMonth, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.3, pointRadius: 5, pointBackgroundColor: '#f59e0b', fill: true, spanGaps: true }]
     },
-    options: { ...chartDefaults(), plugins: { ...chartDefaults().plugins } }
+    options: { ...chartDefaults() }
   });
 
   // ── Chart 2: Distribuzione per tag (doughnut) ──
@@ -1850,34 +1848,43 @@ function renderAnalytics() {
   const ctx2 = document.getElementById('chartTag').getContext('2d');
   anCharts['chartTag'] = new Chart(ctx2, {
     type: 'doughnut',
-    data: {
-      labels: tagLabels,
-      datasets: [{ data: tagLabels.map(t=>tagCount[t]), backgroundColor: CHART_COLORS.slice(0, tagLabels.length), borderWidth: 0, hoverOffset: 6 }]
-    },
-    options: {
-      plugins: { legend: { position: 'right', labels: { color: '#8b95a8', font: { size: 11 }, boxWidth: 12, padding: 10 } } },
-      cutout: '62%'
-    }
+    data: { labels: tagLabels, datasets: [{ data: tagLabels.map(t=>tagCount[t]), backgroundColor: CHART_COLORS.slice(0,tagLabels.length), borderWidth: 0, hoverOffset: 6 }] },
+    options: { plugins: { legend: { position: 'right', labels: { color: '#8b95a8', font: { size: 11 }, boxWidth: 12, padding: 10 } } }, cutout: '62%' }
   });
 
-  // ── Chart 3: Aperti vs chiusi per mese ──
+  // ── Chart 3: TTS medio per mese ──
+  destroyChart('chartTts');
+  const ttsByMonth = allMonths.map(m => {
+    const rows = closed.filter(d => monthKey(d.dataAp) === m);
+    const t = rows.map(d => Math.floor((new Date(d.dataCh)-new Date(d.dataAp))/86400000)).filter(n=>n>=0);
+    return t.length ? Math.round(t.reduce((a,b)=>a+b,0)/t.length) : null;
+  });
+  const ctx3 = document.getElementById('chartTts').getContext('2d');
+  anCharts['chartTts'] = new Chart(ctx3, {
+    type: 'line',
+    data: {
+      labels: allMonths.map(monthLabel),
+      datasets: [{ label: 'TTS medio (gg)', data: ttsByMonth, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', tension: 0.3, pointRadius: 5, pointBackgroundColor: '#a78bfa', fill: true, spanGaps: true }]
+    },
+    options: { ...chartDefaults() }
+  });
+
+  // ── Chart 4: Aperti vs chiusi per mese ──
   destroyChart('chartMonthly');
-  const openByMonth = allMonths.map(m => subset.filter(d => monthKey(d.dataAp) === m && !isClosed(d)).length);
-  const closedByMonth = allMonths.map(m => subset.filter(d => monthKey(d.dataAp) === m && isClosed(d)).length);
-  const ctx3 = document.getElementById('chartMonthly').getContext('2d');
-  anCharts['chartMonthly'] = new Chart(ctx3, {
+  const ctx4 = document.getElementById('chartMonthly').getContext('2d');
+  anCharts['chartMonthly'] = new Chart(ctx4, {
     type: 'bar',
     data: {
       labels: allMonths.map(monthLabel),
       datasets: [
-        { label: 'Aperti', data: openByMonth, backgroundColor: 'rgba(79,142,247,0.7)', borderRadius: 3 },
-        { label: 'Chiusi/Risolti', data: closedByMonth, backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 3 }
+        { label: 'Aperti', data: allMonths.map(m => subset.filter(d => monthKey(d.dataAp)===m && !isClosed(d)).length), backgroundColor: 'rgba(79,142,247,0.7)', borderRadius: 3 },
+        { label: 'Chiusi/Risolti', data: allMonths.map(m => subset.filter(d => monthKey(d.dataAp)===m && isClosed(d)).length), backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 3 }
       ]
     },
-    options: { ...chartDefaults(), scales: { ...chartDefaults().scales, x: { ...chartDefaults().scales.x, stacked: false }, y: { ...chartDefaults().scales.y, stacked: false } } }
+    options: { ...chartDefaults() }
   });
 
-  // ── Chart 4: Tempo medio risoluzione per tag ──
+  // ── Chart 5: TTS per categoria ──
   destroyChart('chartResTag');
   const resByTag = {};
   closed.forEach(d => {
@@ -1886,14 +1893,10 @@ function renderAnalytics() {
     if (days >= 0) { if (!resByTag[t]) resByTag[t]=[]; resByTag[t].push(days); }
   });
   const resTagLabels = Object.keys(resByTag);
-  const resTagValues = resTagLabels.map(t => Math.round(resByTag[t].reduce((a,b)=>a+b,0)/resByTag[t].length));
-  const ctx4 = document.getElementById('chartResTag').getContext('2d');
-  anCharts['chartResTag'] = new Chart(ctx4, {
+  const ctx5 = document.getElementById('chartResTag').getContext('2d');
+  anCharts['chartResTag'] = new Chart(ctx5, {
     type: 'bar',
-    data: {
-      labels: resTagLabels,
-      datasets: [{ label: 'Giorni medi', data: resTagValues, backgroundColor: CHART_COLORS.slice(0,resTagLabels.length), borderRadius: 4 }]
-    },
+    data: { labels: resTagLabels, datasets: [{ label: 'TTS medio (gg)', data: resTagLabels.map(t=>Math.round(resByTag[t].reduce((a,b)=>a+b,0)/resByTag[t].length)), backgroundColor: CHART_COLORS.slice(0,resTagLabels.length), borderRadius: 4 }] },
     options: { ...chartDefaults(), plugins: { legend: { display: false } } }
   });
 
@@ -1904,13 +1907,10 @@ function renderAnalytics() {
   const maxC = caricoSorted[0]?.[1] || 1;
   document.getElementById('anTableCarico').innerHTML =
     `<thead><tr><th>Team / Persona</th><th>Ticket</th><th style="width:40%">Distribuzione</th></tr></thead><tbody>` +
-    caricoSorted.map(([name,cnt]) =>
-      `<tr><td>${name}</td><td class="an-val">${cnt}</td><td>
-        <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${Math.round(cnt/maxC*100)}%;background:var(--accent);border-radius:3px"></div>
-        </div>
-      </td></tr>`
-    ).join('') + '</tbody>';
+    caricoSorted.map(([name,cnt]) => `<tr><td>${name}</td><td class="an-val">${cnt}</td><td>
+      <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(cnt/maxC*100)}%;background:var(--accent);border-radius:3px"></div>
+      </div></td></tr>`).join('') + '</tbody>';
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────
