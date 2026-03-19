@@ -816,22 +816,20 @@ tr:hover .action-btns { opacity: 1; }
       <input type="date" id="anFrom" onchange="renderAnalytics()">
       <label style="margin-left:8px">A</label>
       <input type="date" id="anTo" onchange="renderAnalytics()">
-      <label style="margin-left:8px">Tag</label>
-      <select id="anTag" onchange="renderAnalytics()">
-        <option value="">Tutti</option>
-      </select>
-      <label style="margin-left:8px">Stato</label>
-      <select id="anStato" onchange="renderAnalytics()">
-        <option value="">Tutti</option>
-        <option value="open">open</option>
-        <option value="pending">pending</option>
-        <option value="da chiudere">da chiudere</option>
-        <option value="resolved">resolved</option>
-        <option value="closed">closed</option>
-      </select>
-      <label style="margin-left:8px">In carico a</label>
-      <select id="anCarico" onchange="renderAnalytics()">
-        <option value="">Tutti</option>
+      <div class="pill-group" style="margin-left:12px">
+        <span class="pill-label">Stato</span>
+        <button class="pill" data-val="open" onclick="toggleAnPill(this,'status')">open</button>
+        <button class="pill" data-val="pending" onclick="toggleAnPill(this,'status')">pending</button>
+        <button class="pill" data-val="da chiudere" onclick="toggleAnPill(this,'status')">da chiudere</button>
+        <button class="pill" data-val="resolved" onclick="toggleAnPill(this,'status')">resolved</button>
+        <button class="pill" data-val="closed" onclick="toggleAnPill(this,'status')">closed</button>
+      </div>
+      <div class="pill-group" style="margin-left:12px">
+        <span class="pill-label">Tag</span>
+        <div id="anTagPills" style="display:contents"></div>
+      </div>
+      <select id="anCarico" onchange="renderAnalytics()" style="margin-left:12px;padding:5px 24px 5px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:12px;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\'%3E%3Cpath d=\'M0 0l5 6 5-6z\' fill=\'%235a6275\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center">
+        <option value="">In carico: tutti</option>
       </select>
       <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
         <span style="font-size:11px;color:var(--text3)">Rapido:</span>
@@ -844,33 +842,32 @@ tr:hover .action-btns { opacity: 1; }
     </div>
 
     <!-- KPI row -->
-    <div class="an-kpi-row" style="grid-template-columns:repeat(5,1fr)">
+    <div class="an-kpi-row" style="grid-template-columns:repeat(4,1fr)">
       <div class="an-kpi"><div class="an-kpi-label">Ticket nel periodo</div><div class="an-kpi-value" id="anKpiTot" style="color:var(--text)">—</div></div>
       <div class="an-kpi"><div class="an-kpi-label">Ageing medio</div><div class="an-kpi-value" id="anKpiAvg" style="color:var(--amber)">—</div><div class="an-kpi-sub">giorni (aperti)</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">TTS medio</div><div class="an-kpi-value" id="anKpiTts" style="color:var(--purple)">—</div><div class="an-kpi-sub">giorni (ap. → chiusura)</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">Tempo medio risoluzione</div><div class="an-kpi-value" id="anKpiRes" style="color:var(--green)">—</div><div class="an-kpi-sub">giorni (chiusi)</div></div>
+      <div class="an-kpi"><div class="an-kpi-label">TTS medio</div><div class="an-kpi-value" id="anKpiTts" style="color:var(--purple)">—</div><div class="an-kpi-sub">giorni (apertura → chiusura)</div></div>
       <div class="an-kpi"><div class="an-kpi-label">% risolti</div><div class="an-kpi-value" id="anKpiPct" style="color:var(--accent)">—</div></div>
     </div>
 
     <div class="an-charts-grid">
       <div class="an-card">
         <div class="an-card-title">Ageing medio per mese (gg)</div>
-        <canvas id="chartAgeing" height="200"></canvas>
+        <canvas id="chartAgeing" height="140"></canvas>
       </div>
       <div class="an-card">
         <div class="an-card-title">Distribuzione per categoria</div>
-        <canvas id="chartTag" height="200"></canvas>
+        <canvas id="chartTag" height="140"></canvas>
       </div>
       <div class="an-card">
         <div class="an-card-title">TTS medio per mese (gg)</div>
-        <canvas id="chartTts" height="200"></canvas>
+        <canvas id="chartTts" height="140"></canvas>
       </div>
       <div class="an-card">
         <div class="an-card-title">Ticket aperti vs chiusi per mese</div>
         <canvas id="chartMonthly" height="200"></canvas>
       </div>
       <div class="an-card">
-        <div class="an-card-title">TTS medio per categoria (gg)</div>
+        <div class="an-card-title">TTS per categoria (gg)</div>
         <canvas id="chartResTag" height="200"></canvas>
       </div>
       <div class="an-card">
@@ -1715,44 +1712,48 @@ function switchTab(tab) {
 // ─── ANALYTICS ─────────────────────────────────────────────────────────
 let anCharts = {};
 
+// ─── ANALYTICS FILTERS ─────────────────────────────────────────────────
+const anActiveFilters = { status: new Set(), tag: new Set() };
+
+function toggleAnPill(btn, group) {
+  const val = btn.dataset.val;
+  if (anActiveFilters[group].has(val)) { anActiveFilters[group].delete(val); btn.classList.remove('active'); }
+  else { anActiveFilters[group].add(val); btn.classList.add('active'); }
+  renderAnalytics();
+}
+
 function initAnFilters() {
   const today = new Date();
   const sixAgo = new Date(); sixAgo.setMonth(sixAgo.getMonth() - 6);
-  const fromEl = document.getElementById('anFrom');
-  const toEl = document.getElementById('anTo');
-  if (!fromEl.value) fromEl.value = sixAgo.toISOString().slice(0,10);
-  if (!toEl.value) toEl.value = today.toISOString().slice(0,10);
-  // tag select
-  const tagSel = document.getElementById('anTag');
-  const curTag = tagSel.value;
-  tagSel.innerHTML = '<option value="">Tutti</option>' + allTags().map(t => `<option value="${t.name}">${t.name}</option>`).join('');
-  tagSel.value = curTag;
-  // carico select — built from actual data
-  const caricoSel = document.getElementById('anCarico');
-  const curCarico = caricoSel.value;
-  const caricoVals = [...new Set(data.map(d => d.carico).filter(Boolean))].sort();
-  caricoSel.innerHTML = '<option value="">Tutti</option>' + caricoVals.map(c => `<option value="${c}">${c}</option>`).join('');
-  caricoSel.value = curCarico;
+  if (!document.getElementById('anFrom').value) document.getElementById('anFrom').value = sixAgo.toISOString().slice(0,10);
+  if (!document.getElementById('anTo').value) document.getElementById('anTo').value = today.toISOString().slice(0,10);
+  // tag pills
+  const container = document.getElementById('anTagPills');
+  if (container) container.innerHTML = allTags().map(t =>
+    `<button class="pill${anActiveFilters.tag.has(t.name)?' active':''}" data-val="${t.name}" onclick="toggleAnPill(this,'tag')">${t.name}</button>`
+  ).join('');
+  // carico select
+  const sel = document.getElementById('anCarico');
+  const cur = sel.value;
+  const vals = [...new Set(data.map(d => d.carico).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">In carico: tutti</option>' + vals.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.value = cur;
 }
 
 function setAnPeriod(months) {
   const today = new Date();
   document.getElementById('anTo').value = today.toISOString().slice(0,10);
-  if (months === 0) {
-    document.getElementById('anFrom').value = '';
-  } else {
-    const from = new Date(); from.setMonth(from.getMonth() - months);
-    document.getElementById('anFrom').value = from.toISOString().slice(0,10);
-  }
+  document.getElementById('anFrom').value = months === 0 ? '' : (() => { const d = new Date(); d.setMonth(d.getMonth()-months); return d.toISOString().slice(0,10); })();
   renderAnalytics();
 }
 
 function resetAnFilters() {
   document.getElementById('anFrom').value = '';
   document.getElementById('anTo').value = '';
-  document.getElementById('anTag').value = '';
-  document.getElementById('anStato').value = '';
   document.getElementById('anCarico').value = '';
+  anActiveFilters.status.clear();
+  anActiveFilters.tag.clear();
+  document.querySelectorAll('#pageAnalytics .pill.active').forEach(p => p.classList.remove('active'));
   initAnFilters();
   renderAnalytics();
 }
@@ -1760,15 +1761,15 @@ function resetAnFilters() {
 function getAnData() {
   const from = document.getElementById('anFrom').value;
   const to = document.getElementById('anTo').value;
-  const tag = document.getElementById('anTag').value;
-  const stato = document.getElementById('anStato').value;
   const carico = document.getElementById('anCarico').value;
+  const fS = anActiveFilters.status;
+  const fT = anActiveFilters.tag;
   return data.filter(d => {
     if (!d.dataAp) return false;
     if (from && d.dataAp < from) return false;
     if (to && d.dataAp > to) return false;
-    if (tag && d.tag !== tag) return false;
-    if (stato && d.stato !== stato) return false;
+    if (fS.size && !fS.has((d.stato||'').toLowerCase().trim())) return false;
+    if (fT.size && !fT.has(d.tag)) return false;
     if (carico && d.carico !== carico) return false;
     return true;
   });
@@ -1808,7 +1809,6 @@ function renderAnalytics() {
   const closed = subset.filter(d => isClosed(d) && d.dataCh && d.dataAp);
   const ttsTimes = closed.map(d => Math.floor((new Date(d.dataCh) - new Date(d.dataAp)) / 86400000)).filter(n => n >= 0);
   const avgTts = ttsTimes.length ? Math.round(ttsTimes.reduce((a,b)=>a+b,0)/ttsTimes.length) : null;
-  const avgRes = avgTts; // TTS e risoluzione sono lo stesso calcolo
   const openSubset = subset.filter(d => !isClosed(d));
   const ages = openSubset.map(d => aging(d)).filter(a => a !== null);
   const avgAge = ages.length ? Math.round(ages.reduce((a,b)=>a+b,0)/ages.length) : null;
@@ -1817,7 +1817,6 @@ function renderAnalytics() {
   document.getElementById('anKpiTot').textContent = subset.length;
   document.getElementById('anKpiAvg').textContent = avgAge !== null ? avgAge+'gg' : '—';
   document.getElementById('anKpiTts').textContent = avgTts !== null ? avgTts+'gg' : '—';
-  document.getElementById('anKpiRes').textContent = avgRes !== null ? avgRes+'gg' : '—';
   document.getElementById('anKpiPct').textContent = pctRes !== null ? pctRes+'%' : '—';
 
   // ── Collect months ──
