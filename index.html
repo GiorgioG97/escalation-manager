@@ -1122,11 +1122,28 @@ async function saveData() {
 }
 
 // ─── AGING ─────────────────────────────────────────────────────────────
+function parseDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  // ISO: 2026-01-13
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s.slice(0,10));
+  // Italian: 13/01/2026 or 13-01-2026
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return new Date(`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`);
+  // Excel serial number
+  if (/^\d+$/.test(s)) {
+    const d = new Date(Math.round((parseInt(s) - 25569) * 86400000));
+    return isNaN(d) ? null : d;
+  }
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
 function aging(item) {
   if (!item.dataAp) return null;
-  const end = item.dataCh ? new Date(item.dataCh) : new Date();
-  const start = new Date(item.dataAp);
-  if (isNaN(start)) return null;
+  const start = parseDate(item.dataAp);
+  if (!start || isNaN(start)) return null;
+  const end = item.dataCh ? (parseDate(item.dataCh) || new Date()) : new Date();
   return Math.floor((end - start) / 86400000);
 }
 function isClosed(item) { const s = (item.stato||'').toLowerCase().trim(); return s === 'closed' || s === 'resolved'; }
@@ -1807,7 +1824,11 @@ function renderAnalytics() {
 
   // ── KPIs ──
   const closed = subset.filter(d => isClosed(d) && d.dataCh && d.dataAp);
-  const ttsTimes = closed.map(d => Math.floor((new Date(d.dataCh) - new Date(d.dataAp)) / 86400000)).filter(n => n >= 0);
+  const ttsTimes = closed.map(d => {
+    const s = parseDate(d.dataAp), e = parseDate(d.dataCh);
+    if (!s || !e) return null;
+    return Math.floor((e - s) / 86400000);
+  }).filter(n => n !== null && n >= 0);
   const avgTts = ttsTimes.length ? Math.round(ttsTimes.reduce((a,b)=>a+b,0)/ttsTimes.length) : null;
   const openSubset = subset.filter(d => !isClosed(d));
   const ages = openSubset.map(d => aging(d)).filter(a => a !== null);
@@ -1855,7 +1876,7 @@ function renderAnalytics() {
   destroyChart('chartTts');
   const ttsByMonth = allMonths.map(m => {
     const rows = closed.filter(d => monthKey(d.dataAp) === m);
-    const t = rows.map(d => Math.floor((new Date(d.dataCh)-new Date(d.dataAp))/86400000)).filter(n=>n>=0);
+    const t = rows.map(d => { const s=parseDate(d.dataAp),e=parseDate(d.dataCh); return (s&&e)?Math.floor((e-s)/86400000):null; }).filter(n=>n!==null&&n>=0);
     return t.length ? Math.round(t.reduce((a,b)=>a+b,0)/t.length) : null;
   });
   const ctx3 = document.getElementById('chartTts').getContext('2d');
@@ -1888,7 +1909,9 @@ function renderAnalytics() {
   const resByTag = {};
   closed.forEach(d => {
     const t = d.tag||'altro';
-    const days = Math.floor((new Date(d.dataCh)-new Date(d.dataAp))/86400000);
+    const s = parseDate(d.dataAp), e = parseDate(d.dataCh);
+    if (!s || !e) return;
+    const days = Math.floor((e-s)/86400000);
     if (days >= 0) { if (!resByTag[t]) resByTag[t]=[]; resByTag[t].push(days); }
   });
   const resTagLabels = Object.keys(resByTag);
