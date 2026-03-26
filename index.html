@@ -1348,7 +1348,8 @@ function render() {
 
 // ─── SIDEBAR ───────────────────────────────────────────────────────────
 function updateSidebar() {
-  const open = data.filter(d => !isClosed(d));
+  const OPEN_STATES = new Set(['open','pending','da chiudere']);
+  const open = data.filter(d => OPEN_STATES.has((d.stato||'').toLowerCase().trim()));
   const ages = open.map(d => aging(d)).filter(a => a !== null);
   const avg = ages.length ? Math.round(ages.reduce((a,b) => a+b, 0) / ages.length) : 0;
   const crit = open.filter(d => { const a = aging(d); return a !== null && a > 14; });
