@@ -915,7 +915,7 @@ tr:hover .action-btns { opacity: 1; }
       <span class="setup-step-num">1</span><strong style="font-size:13px">Crea un Bin</strong>
       <p style="font-size:12px;color:var(--text2);margin:6px 0 8px">Vai su <a href="https://jsonbin.io/app/bins" target="_blank" style="color:var(--accent)">jsonbin.io/app/bins</a> → clicca <em>Create Bin</em> → incolla <code>{"data":[],"customTags":[]}</code> come contenuto iniziale → salva.</p>
       <label>BIN ID (dalle URL: /b/<strong>QUESTO</strong>)</label>
-      <input id="setupBinId" name="esc-bin-id" placeholder="64abc123def456..." autocomplete="off" spellcheck="false">
+      <input id="setupBinId" name="esc-bin-id" type="password" placeholder="64abc123def456..." autocomplete="new-password" spellcheck="false">
       <div class="setup-hint">Es: <code>64f3a2b7c4d5e6f7a8b9c0d1</code></div>
     </div>
 
@@ -1794,6 +1794,15 @@ function renderAnalytics() {
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────
+// Svuota il campo ricerca dopo il caricamento per battere l'autofill del browser.
+// Chrome/Safari ignorano autocomplete="off" e ci mettono il BIN ID salvato.
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const s = document.getElementById('searchInput');
+    if (s && s.value) { s.value = ''; updateResetBtn(); }
+  }, 200);
+});
+
 setSyncState('loading', 'inizializzazione…');
 document.getElementById('pageTracker').style.display = 'flex';
 initColResize();
