@@ -1531,6 +1531,13 @@ function migrateItem(it){
   }
   if(m.extra && !m.note){ m.note = m.extra; delete m.extra; }
   if(m.area){ m.note = (m.note?m.note+' | ':'')+'area: '+m.area; delete m.area; }
+  // Migrazione v2: nel vecchio tracker la colonna "data chiusura" dell'export
+  // veniva mappata erroneamente su dataChTkt. Se dataChEsc è vuota e dataChTkt
+  // è valorizzata, sposta il valore (l'export non ha una colonna chiusura ticket distinta).
+  if(m.dataChTkt && !m.dataChEsc){
+    m.dataChEsc = m.dataChTkt;
+    m.dataChTkt = '';
+  }
   FIELDS.forEach(f=>{ if(m[f]===undefined) m[f]=''; });
   return m;
 }
@@ -1538,12 +1545,24 @@ async function loadData(){
   setSyncState('loading','caricamento…');
   try{
     const rec = await jsonbinRead();
-    data = Array.isArray(rec.data) ? rec.data.map(migrateItem) : [];
+    const raw = Array.isArray(rec.data) ? rec.data : [];
+    // Rileva se la migrazione v2 ha toccato qualcosa (dataChTkt→dataChEsc)
+    let migrated = 0;
+    data = raw.map(it=>{
+      const before = (it.dataChTkt||'') && !(it.dataChEsc||'');
+      const m = migrateItem(it);
+      if(before && m.dataChEsc && !m.dataChTkt) migrated++;
+      return m;
+    });
     customTags = Array.isArray(rec.customTags) ? rec.customTags : [];
     setSyncState('ok','sincronizzato');
     render();
     buildTagPills();
     buildTagSelects();
+    if(migrated > 0){
+      toast(`Migrate ${migrated} righe: data chiusura spostata da "ch.tkt" a "ch.esc"`,'ok');
+      await saveData();
+    }
   }catch(e){
     console.error(e);
     setSyncState('err','errore: '+e.message);
