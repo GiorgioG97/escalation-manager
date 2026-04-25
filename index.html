@@ -829,6 +829,12 @@ body {
 .sla-banner.warn { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #fcd34d; }
 .sla-banner.ok { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); color: #86efac; }
 
+/* SLA TIER CARDS */
+.sla-tier { position: relative; }
+.sla-bar { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.sla-bar-fill { height: 100%; border-radius: 2px; transition: width .3s ease, background .3s ease; }
+.sla-tier .an-kpi-value { position: relative; }
+
 /* QUICK STATS */
 .qs-num { font-family: var(--mono); font-size: 16px; font-weight: 600; display:block; line-height:1.1; }
 .qs-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; display:block; margin-top: 2px; }
@@ -1099,18 +1105,25 @@ body {
       <div class="an-kpi kpi-green"><div class="an-kpi-label">Chiuse</div><div class="an-kpi-value" id="anKpiClosed">—</div><div class="an-kpi-sub" id="anKpiClosedSub">—</div></div>
       <div class="an-kpi kpi-amber"><div class="an-kpi-label">Aperte oggi</div><div class="an-kpi-value" id="anKpiOpen">—</div><div class="an-kpi-sub" id="anKpiOpenSub">—</div></div>
       <div class="an-kpi kpi-red"><div class="an-kpi-label">Critiche (&gt;14gg)</div><div class="an-kpi-value" id="anKpiCrit">—</div><div class="an-kpi-sub" id="anKpiCritSub">—</div></div>
-      <div class="an-kpi kpi-purple"><div class="an-kpi-label">MTTR</div><div class="an-kpi-value" id="anKpiMttr">—</div><div class="an-kpi-sub">gg ap→ch escalation</div></div>
-      <div class="an-kpi kpi-teal"><div class="an-kpi-label">P50 / P90</div><div class="an-kpi-value" id="anKpiPct">—</div><div class="an-kpi-sub">mediana / 90° percentile</div></div>
+      <div class="an-kpi kpi-purple" title="Mean Time To Resolution: tempo medio di risoluzione"><div class="an-kpi-label">Tempo medio chiusura</div><div class="an-kpi-value" id="anKpiMttr">—</div><div class="an-kpi-sub">giorni (MTTR)</div></div>
+      <div class="an-kpi kpi-teal" title="P50 = metà delle chiuse entro N giorni; P90 = 9 su 10 entro N giorni"><div class="an-kpi-label">Mediana / 90° perc.</div><div class="an-kpi-value" id="anKpiPct">—</div><div class="an-kpi-sub">giorni — P50 / P90</div></div>
     </div>
 
     <!-- SECONDARY KPI ROW -->
     <div class="an-kpi-row">
-      <div class="an-kpi"><div class="an-kpi-label">Ageing medio (aperte)</div><div class="an-kpi-value" id="anKpiAge">—</div><div class="an-kpi-sub">gg</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">Resolution rate</div><div class="an-kpi-value" id="anKpiRate">—</div><div class="an-kpi-sub">chiuse / totali</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">Throughput</div><div class="an-kpi-value" id="anKpiThr">—</div><div class="an-kpi-sub" id="anKpiThrSub">chiuse/sett</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">Backlog netto</div><div class="an-kpi-value" id="anKpiBacklog">—</div><div class="an-kpi-sub" id="anKpiBacklogSub">aperte-chiuse periodo</div></div>
-      <div class="an-kpi kpi-pink"><div class="an-kpi-label">Ticket ricorrenti</div><div class="an-kpi-value" id="anKpiRepeat">—</div><div class="an-kpi-sub">shop/AM ripetuti</div></div>
-      <div class="an-kpi"><div class="an-kpi-label">SLA compliance</div><div class="an-kpi-value" id="anKpiSla">—</div><div class="an-kpi-sub">chiuse entro 14gg</div></div>
+      <div class="an-kpi"><div class="an-kpi-label">Ageing medio (aperte)</div><div class="an-kpi-value" id="anKpiAge">—</div><div class="an-kpi-sub">giorni</div></div>
+      <div class="an-kpi"><div class="an-kpi-label">Tasso di chiusura</div><div class="an-kpi-value" id="anKpiRate">—</div><div class="an-kpi-sub">chiuse / totali</div></div>
+      <div class="an-kpi" title="Velocità di chiusura: escalation chiuse a settimana, calcolata sulle ultime 4 settimane"><div class="an-kpi-label">Velocità chiusura</div><div class="an-kpi-value" id="anKpiThr">—</div><div class="an-kpi-sub" id="anKpiThrSub">chiuse a settimana</div></div>
+      <div class="an-kpi" title="Differenza fra escalation aperte e chiuse nel periodo: positivo = backlog cresce"><div class="an-kpi-label">Backlog netto</div><div class="an-kpi-value" id="anKpiBacklog">—</div><div class="an-kpi-sub" id="anKpiBacklogSub">aperte − chiuse periodo</div></div>
+      <div class="an-kpi kpi-pink"><div class="an-kpi-label">Ticket ricorrenti</div><div class="an-kpi-value" id="anKpiRepeat">—</div><div class="an-kpi-sub">shop con ≥3 escalation</div></div>
+    </div>
+
+    <!-- SLA TIERS ROW -->
+    <div class="an-section-title">Distribuzione tempi di chiusura</div>
+    <div class="an-kpi-row">
+      <div class="an-kpi sla-tier" id="anSlaT2"><div class="an-kpi-label">Chiuse entro 2 giorni</div><div class="an-kpi-value" id="anKpiSla2">—</div><div class="an-kpi-sub" id="anKpiSla2Sub">— su —</div><div class="sla-bar"><div class="sla-bar-fill" id="anKpiSla2Bar" style="width:0%"></div></div></div>
+      <div class="an-kpi sla-tier" id="anSlaT5"><div class="an-kpi-label">Chiuse entro 5 giorni</div><div class="an-kpi-value" id="anKpiSla5">—</div><div class="an-kpi-sub" id="anKpiSla5Sub">— su —</div><div class="sla-bar"><div class="sla-bar-fill" id="anKpiSla5Bar" style="width:0%"></div></div></div>
+      <div class="an-kpi sla-tier" id="anSlaT10"><div class="an-kpi-label">Chiuse entro 10 giorni</div><div class="an-kpi-value" id="anKpiSla10">—</div><div class="an-kpi-sub" id="anKpiSla10Sub">— su —</div><div class="sla-bar"><div class="sla-bar-fill" id="anKpiSla10Bar" style="width:0%"></div></div></div>
     </div>
 
     <div class="an-section-title">Trend temporali</div>
@@ -1133,7 +1146,7 @@ body {
         <div class="an-card-canvas-wrap"><canvas id="chartAgeing"></canvas></div>
       </div>
       <div class="an-card">
-        <div class="an-card-title">MTTR per mese<span class="sub">gg ap→ch escalation</span></div>
+        <div class="an-card-title">Tempo medio di chiusura per mese<span class="sub">giorni dall'apertura escalation</span></div>
         <div class="an-card-canvas-wrap"><canvas id="chartTts"></canvas></div>
       </div>
     </div>
@@ -1161,7 +1174,7 @@ body {
         <div class="an-card-canvas-wrap"><canvas id="chartAgeBuckets"></canvas></div>
       </div>
       <div class="an-card">
-        <div class="an-card-title">MTTR per tag<span class="sub">gg (chiuse)</span></div>
+        <div class="an-card-title">Tempo medio di chiusura per tag<span class="sub">giorni (solo chiuse)</span></div>
         <div class="an-card-canvas-wrap"><canvas id="chartResTag"></canvas></div>
       </div>
     </div>
@@ -2276,10 +2289,13 @@ function exportXLSX(){
     {KPI:'Aperte', Valore:open.length},
     {KPI:'Chiuse', Valore:closed.length},
     {KPI:'Critiche (>14gg aperte)', Valore:crit.length},
-    {KPI:'MTTR (giorni)', Valore:mttr},
-    {KPI:'P50 TTR', Valore:Math.round(percentile(ttrs,0.5))},
-    {KPI:'P90 TTR', Valore:Math.round(percentile(ttrs,0.9))},
-    {KPI:'Resolution rate %', Valore: data.length ? Math.round(closed.length/data.length*100) : 0}
+    {KPI:'Tempo medio chiusura - MTTR (gg)', Valore:mttr},
+    {KPI:'Mediana - P50 (gg)', Valore:Math.round(percentile(ttrs,0.5))},
+    {KPI:'90° percentile - P90 (gg)', Valore:Math.round(percentile(ttrs,0.9))},
+    {KPI:'Tasso di chiusura %', Valore: data.length ? Math.round(closed.length/data.length*100) : 0},
+    {KPI:'Chiuse entro 2gg %', Valore: closed.length ? Math.round(closed.filter(d=>{const t=ttr(d);return t!==null&&t<=2;}).length/closed.length*100) : 0},
+    {KPI:'Chiuse entro 5gg %', Valore: closed.length ? Math.round(closed.filter(d=>{const t=ttr(d);return t!==null&&t<=5;}).length/closed.length*100) : 0},
+    {KPI:'Chiuse entro 10gg %', Valore: closed.length ? Math.round(closed.filter(d=>{const t=ttr(d);return t!==null&&t<=10;}).length/closed.length*100) : 0}
   ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kpi), 'KPI');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(aggregateBy('tag')), 'Per tag');
@@ -2711,6 +2727,13 @@ function renderAnalytics(){
   const recurringShops = [...shopCount.values()].filter(v=>v>=3).length;
   const slaClosed = closed.filter(d=>{ const t=ttr(d); return t!==null && t<=14; }).length;
   const sla = closed.length ? Math.round(slaClosed/closed.length*100) : 0;
+  // SLA tiers: ≤2gg, ≤5gg, ≤10gg
+  const slaT2 = closed.filter(d=>{ const t=ttr(d); return t!==null && t<=2; }).length;
+  const slaT5 = closed.filter(d=>{ const t=ttr(d); return t!==null && t<=5; }).length;
+  const slaT10 = closed.filter(d=>{ const t=ttr(d); return t!==null && t<=10; }).length;
+  const slaT2Pct = closed.length ? Math.round(slaT2/closed.length*100) : 0;
+  const slaT5Pct = closed.length ? Math.round(slaT5/closed.length*100) : 0;
+  const slaT10Pct = closed.length ? Math.round(slaT10/closed.length*100) : 0;
 
   // KPI cards
   const setKpi = (id, v, sub) => {
@@ -2721,33 +2744,63 @@ function renderAnalytics(){
       if(s) s.textContent = sub;
     }
   };
-  setKpi('anKpiTot', rows.length, `${open.length} aperte, ${closed.length} chiuse`);
-  setKpi('anKpiClosed', closed.length, resRate+'%');
+  setKpi('anKpiTot', rows.length, `${open.length} aperte · ${closed.length} chiuse`);
+  setKpi('anKpiClosed', closed.length, resRate+'% del totale');
   setKpi('anKpiOpen', open.length, open.length ? `ageing medio ${avgAge}gg` : '—');
   setKpi('anKpiCrit', crit, crit ? 'azione urgente' : 'tutto ok');
-  setKpi('anKpiMttr', avgTtr+'gg');
+  setKpi('anKpiMttr', avgTtr+' gg');
   setKpi('anKpiPct', p50+' / '+p90);
   setKpi('anKpiAge', avgAge);
   setKpi('anKpiRate', resRate+'%');
-  setKpi('anKpiThr', throughput, 'ultime 4 sett.');
-  setKpi('anKpiBacklog', backlogNet);
+  setKpi('anKpiThr', throughput, `${closed4w.length} chiuse in 4 sett.`);
+  setKpi('anKpiBacklog', (backlogNet>0?'+':'')+backlogNet, backlogNet>0?'backlog cresce':(backlogNet<0?'backlog cala':'stabile'));
   setKpi('anKpiRepeat', recurringShops);
-  setKpi('anKpiSla', sla+'%');
 
-  // SLA banner
+  // SLA tiers
+  const setSlaTier = (id, count, pct) => {
+    const elV = document.getElementById('anKpiSla'+id);
+    const elS = document.getElementById('anKpiSla'+id+'Sub');
+    const elB = document.getElementById('anKpiSla'+id+'Bar');
+    if(elV) elV.textContent = pct+'%';
+    if(elS) elS.textContent = `${count} su ${closed.length} chiuse`;
+    if(elB){
+      elB.style.width = pct+'%';
+      // Colore: rosso se <50, ambra <80, verde >=80
+      let c = '#ef4444';
+      if(pct >= 80) c = '#22c55e';
+      else if(pct >= 50) c = '#f59e0b';
+      elB.style.background = c;
+    }
+  };
+  if(closed.length){
+    setSlaTier('2', slaT2, slaT2Pct);
+    setSlaTier('5', slaT5, slaT5Pct);
+    setSlaTier('10', slaT10, slaT10Pct);
+  } else {
+    ['2','5','10'].forEach(t=>{
+      const elV = document.getElementById('anKpiSla'+t);
+      const elS = document.getElementById('anKpiSla'+t+'Sub');
+      const elB = document.getElementById('anKpiSla'+t+'Bar');
+      if(elV) elV.textContent = '—';
+      if(elS) elS.textContent = 'nessuna chiusa';
+      if(elB) elB.style.width = '0%';
+    });
+  }
+
+  // Banner: usa la soglia 10gg come "rapida"
   const banner = document.getElementById('slaBanner');
   if(banner){
     if(crit >= 5){
       banner.className = 'sla-banner crit';
       banner.innerHTML = `⚠ <b>${crit} escalation critiche</b> aperte da oltre 14 giorni — azione urgente consigliata`;
       banner.style.display = 'block';
-    } else if(sla < 60 && closed.length >= 5){
+    } else if(slaT10Pct < 50 && closed.length >= 5){
       banner.className = 'sla-banner warn';
-      banner.innerHTML = `⚡ SLA al <b>${sla}%</b> — meno di 2/3 delle escalation chiuse entro 14gg`;
+      banner.innerHTML = `⚡ Solo il <b>${slaT10Pct}%</b> delle escalation è chiuso entro 10 giorni`;
       banner.style.display = 'block';
-    } else if(closed.length >= 10 && sla >= 90){
+    } else if(closed.length >= 10 && slaT5Pct >= 80){
       banner.className = 'sla-banner ok';
-      banner.innerHTML = `✓ SLA al <b>${sla}%</b> — performance eccellente`;
+      banner.innerHTML = `✓ <b>${slaT5Pct}%</b> chiuse entro 5 giorni — performance eccellente`;
       banner.style.display = 'block';
     } else {
       banner.style.display = 'none';
