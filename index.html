@@ -1440,6 +1440,7 @@ body {
 <!-- TOAST -->
 <div class="toast-wrap" id="toastWrap"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
@@ -1505,17 +1506,48 @@ async function jsonbinRead(){
   const r = await fetch(`https://api.jsonbin.io/v3/b/${b}/latest`,{headers:{'X-Master-Key':k}});
   if(!r.ok) throw new Error('read failed '+r.status);
   const j = await r.json();
-  return j.record || {};
+  const rec = j.record || {};
+  // Decompressione automatica: se il record ha la chiave _z (compressed), decomprimi
+  if(rec && typeof rec === 'object' && rec._z && typeof LZString !== 'undefined'){
+    try{
+      const decompressed = LZString.decompressFromBase64(rec._z);
+      if(decompressed){
+        const parsed = JSON.parse(decompressed);
+        return parsed;
+      }
+    }catch(e){
+      console.error('decompression failed', e);
+      throw new Error('decompressione fallita');
+    }
+  }
+  return rec;
 }
 async function jsonbinWrite(payload){
   const b = getBinId(), k = getApiKey();
   if(!b||!k) throw new Error('missing creds');
+  let body;
+  if(typeof LZString !== 'undefined'){
+    const json = JSON.stringify(payload);
+    const compressed = LZString.compressToBase64(json);
+    body = JSON.stringify({_z: compressed, _v: 1, _orig_kb: Math.round(json.length/1024), _comp_kb: Math.round(compressed.length/1024)});
+  } else {
+    body = JSON.stringify(payload);
+  }
+  // Pre-check: se siamo oltre 95KB con compressione, avvertiamo
+  if(body.length > 95000){
+    console.warn(`Payload ${Math.round(body.length/1024)}KB vicino al limite JSONBin free (100KB)`);
+  }
   const r = await fetch(`https://api.jsonbin.io/v3/b/${b}`,{
     method:'PUT',
     headers:{'Content-Type':'application/json','X-Master-Key':k,'X-Bin-Versioning':'false'},
-    body: JSON.stringify(payload)
+    body: body
   });
-  if(!r.ok) throw new Error('write failed '+r.status);
+  if(!r.ok){
+    let msg = 'write failed '+r.status;
+    try{ const ej = await r.json(); if(ej && ej.message) msg += ': '+ej.message; }catch(_){}
+    if(r.status === 400 || r.status === 413) msg += ` (payload ${Math.round(body.length/1024)}KB)`;
+    throw new Error(msg);
+  }
   return r.json();
 }
 
