@@ -572,7 +572,7 @@ body {
 .form-grid.full { grid-template-columns: 1fr; }
 .form-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
 
-.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .form-group label {
   font-size: 10.5px; color: var(--text3); font-weight: 500;
   letter-spacing: .02em;
@@ -586,6 +586,8 @@ body {
   font-family: var(--sans); font-size: 12.5px;
   outline: none;
   resize: vertical;
+  width: 100%;
+  min-width: 0;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
 .form-group textarea { min-height: 60px; font-family: var(--sans); }
@@ -1334,9 +1336,9 @@ body {
     </div>
 
     <div class="form-section-title">Identificazione</div>
-    <div class="form-grid">
+    <div class="form-grid" id="fIdentGrid">
       <div class="form-group"><label>Ticket *</label><input id="fTicket" placeholder="INC2XXXXXX / RITM…" autocomplete="off"></div>
-      <div class="form-group"><label>Priority</label>
+      <div class="form-group" id="fPriorityGroup"><label>Priority</label>
         <select id="fPriority">
           <option value="">—</option>
           <option value="1">1 - Alta</option>
@@ -1353,11 +1355,7 @@ body {
       <div class="form-group"><label>Tag</label>
         <select id="fTag"><option value="">—</option></select>
       </div>
-      <div class="form-group"><label>Shop</label><input id="fShop" placeholder="Es. Livorno, Roma Ciamarra…" autocomplete="off"></div>
-    </div>
-    <div class="form-grid">
       <div class="form-group"><label>AM / Segnalato da</label><input id="fAm" placeholder="Es. Luchini" autocomplete="off"></div>
-      <div class="form-group"><label>Azione</label><input id="fAzione" placeholder="Es. scalato su Reply, ticket deloitte…" autocomplete="off"></div>
     </div>
 
     <div class="form-section-title">Gestione</div>
@@ -2283,6 +2281,8 @@ function openModal(){
   const dAp = document.getElementById('fDataApEsc'); if(dAp) dAp.value = today;
   const dTk = document.getElementById('fDataApTkt'); if(dTk) dTk.value = today;
   const st = document.getElementById('fStato'); if(st) st.value = 'open';
+  const prioGrp = document.getElementById('fPriorityGroup'); if(prioGrp) prioGrp.style.display = 'none';
+  const identGrid = document.getElementById('fIdentGrid'); if(identGrid) identGrid.classList.add('full');
   document.getElementById('modalOverlay').style.display = 'flex';
   setTimeout(()=>document.getElementById('fTicket')?.focus(), 100);
 }
@@ -2300,6 +2300,8 @@ function editItem(id){
     if(f.startsWith('data')) el.value = toISO(it[f]) || '';
     else el.value = it[f] || '';
   });
+  const prioGrp = document.getElementById('fPriorityGroup'); if(prioGrp) prioGrp.style.display = '';
+  const identGrid = document.getElementById('fIdentGrid'); if(identGrid) identGrid.classList.remove('full');
   document.getElementById('modalOverlay').style.display = 'flex';
 }
 function closeModal(){
