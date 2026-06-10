@@ -1713,17 +1713,35 @@ function toISO(v){
   if(!d) return '';
   return d.toISOString().slice(0,10);
 }
+// Conta i giorni lavorativi (lun-ven) tra due date, escludendo sabato e domenica.
+// Conta i giorni interi trascorsi: stessa data o chiusura il giorno stesso = 0.
+function workingDaysBetween(start, end){
+  if(!start || !end) return null;
+  // normalizza a mezzanotte per contare giorni interi
+  const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  if(e <= s) return 0;
+  let count = 0;
+  const cur = new Date(s);
+  // conta i giorni successivi alla data di partenza fino alla data finale inclusa
+  while(cur < e){
+    cur.setDate(cur.getDate() + 1);
+    const dow = cur.getDay(); // 0=dom, 6=sab
+    if(dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
 function aging(it){
   const start = parseDate(it.dataApEsc);
   if(!start) return null;
   const end = parseDate(it.dataChEsc) || new Date();
-  return Math.floor((end - start) / 86400000);
+  return workingDaysBetween(start, end);
 }
 function ttr(it){
   const start = parseDate(it.dataApEsc);
   const end = parseDate(it.dataChEsc);
   if(!start || !end) return null;
-  return Math.floor((end - start) / 86400000);
+  return workingDaysBetween(start, end);
 }
 // Stati considerati "chiusi/non aperti" — tutto ciò che non è lavoro attivo
 const CLOSED_STATES = new Set([
